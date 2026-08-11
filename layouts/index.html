@@ -1,0 +1,28 @@
+{{ define "head" }}
+{{ $options := dict "transpiler" "dartsass" "targetPath" "css/list.css" }}
+{{ with resources.Get "sass/layouts/list.scss" | toCSS $options | postCSS | minify | fingerprint }}
+  <link rel="stylesheet" href="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous">
+{{ end }}
+{{ end }}
+
+{{ define "main" }}
+<main id="main" class="archive">
+  <p class="epigraph"><em>A rock pile ceases to be a rock pile the moment a single man contemplates it, bearing within him the image of a cathedral.</em><br>&mdash; Antoine de Saint-Exup&eacute;ry</p>
+  {{ $pages := where .Site.RegularPages "Type" "posts" }}
+  {{ range $pages.GroupByDate "2006" }}
+  <div class="post-group">
+    <h3>{{ .Key }}</h3>
+    <ul>
+      {{ range .Pages }}
+      <li>
+        <a class="post-link" href="{{ .RelPermalink }}">
+          <span>{{ .Title }}</span>
+          <time>{{ .PublishDate.Format $.Site.Params.dateFormat }}</time>
+        </a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+  {{ end }}
+</main>
+{{ end }}

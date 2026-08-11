@@ -1,0 +1,72 @@
+baseURL: https://pubs.miloskozak.cz/
+locale: en-us
+title: Miloš Kozák
+theme: hugo-texify3
+
+params:
+  customJS: ["js/pr-status.js", "js/lightbox.js"]
+  title: "Just <code>Miloš Kozák</code>&hellip; <em>the opinions are mine</em>"
+  buymeacoffee:
+    code: ""
+  customCSS: ["css/custom.css"]
+  author: Miloš Kozák
+  description: Notes from learning things the hard way — Zig, systems, tooling.
+  dateFormat: 2 January 2006
+  toc: true
+  math: false
+  emphasisWithDots: true
+  rootFontSize: "105%"
+  footnote: |
+    <a class=link href=/index.xml>RSS</a> |
+    <a class=link href=/llms.txt>llms.txt</a> |
+    Powered by <a class=link href=https://gohugo.io target=_blank rel=noopener>Hugo</a> |
+    Theme <a class=link href=https://github.com/michaelneuper/hugo-texify3 target=_blank rel=noopener>TeXify3</a>
+  commentEngine:
+    code: |
+      <script src="https://giscus.app/client.js"
+              data-repo="lejmr/pubs.miloskozak.cz"
+              data-repo-id="R_kgDOT0f-fQ"
+              data-category="Blog comments"
+              data-category-id="DIC_kwDOT0f-fc4DDFpe"
+              data-mapping="pathname"
+              data-strict="1"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="bottom"
+              data-theme="light"
+              data-lang="en"
+              data-loading="lazy"
+              crossorigin="anonymous"
+              async>
+      </script>
+
+menu:
+  main:
+    - name: About
+      url: /about/
+      weight: 10
+
+markup:
+  highlight:
+    noClasses: false
+  goldmark:
+    renderer:
+      unsafe: true
+
+outputs:
+  home: [HTML, RSS, LLMS]
+  page: [HTML, MARKDOWN]
+
+outputFormats:
+  LLMS:
+    mediaType: text/plain
+    baseName: llms
+    isPlainText: true
+  MARKDOWN:
+    mediaType: text/markdown
+    baseName: index
+    isPlainText: true
+
+mediaTypes:
+  text/markdown:
+    suffixes: [md]

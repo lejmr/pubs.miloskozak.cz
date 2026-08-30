@@ -1,0 +1,5 @@
+{{- /* Posts write image paths relative to the source file (../../static/img/…)
+so Obsidian can resolve them inside the vault; strip the static prefix here
+so the website keeps serving them from /img/… as before. */ -}}
+{{- $src := replaceRE `^(\.\./)*static/` "/" .Destination -}}
+<img src="{{ $src | safeURL }}" alt="{{ .Text }}"{{ with .Title }} title="{{ . }}"{{ end }}>

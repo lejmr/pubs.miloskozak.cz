@@ -21,13 +21,13 @@ I did try to buy my way out of it. [Lovato LVM40A127](https://catalogue.lovatoel
 
 The rest of the hardware follows from that decision: a [Wemos S2 mini](https://www.wemos.cc/en/latest/s2/s2_mini.html) ESP32 board, a [MAX485 converter](https://www.aliexpress.com/item/1005006071143565.html) because ESP boards don't speak RS-485, a [24V→5V step-down](https://dratek.cz/arduino/1738-step-down-modul-napajeni-mini-buck-nastavitelny.html) to power the logic, all soldered onto a universal [prototyping board](https://www.aliexpress.com/item/1005008742636890.html) and packed into a [SZOMK DIN rail enclosure](https://www.aliexpress.com/item/1005006067012648.html).
 
-![Wiring](/img/smart-water-management/wiring.png)
-![Initial solution](/img/smart-water-management/testing.jpg)
-![Prototype](/img/smart-water-management/prototype.jpg)
+![Wiring](../../static/img/smart-water-management/wiring.png)
+![Initial solution](../../static/img/smart-water-management/testing.jpg)
+![Prototype](../../static/img/smart-water-management/prototype.jpg)
 
 Prototype ready for deployment:
 
-![Final test](/img/smart-water-management/final-preparation.jpg)
+![Final test](../../static/img/smart-water-management/final-preparation.jpg)
 
 The ESP board's configuration lives in [`wemos.yml`](https://github.com/lejmr/dyi-ha-water-management/blob/master/wemos.yml) and gets flashed like this:
 
@@ -37,8 +37,8 @@ esphome run --device /dev/tty.usbmodem01 wemos.yml
 
 The final deployment ended up in two places: the wiring cabinet and the well itself.
 
-![Deployment in wiring deck](/img/smart-water-management/deployment.jpg)
-![Deployment in well](/img/smart-water-management/well.jpeg)
+![Deployment in wiring deck](../../static/img/smart-water-management/deployment.jpg)
+![Deployment in well](../../static/img/smart-water-management/well.jpeg)
 
 The pump itself is powered through a [Shelly 1PM gen4](https://kb.shelly.cloud/knowledge-base/shelly-1pm-gen4), driven by a Home Assistant automation: when the well level climbs above 190 cm, switch on; wait until it drops below 140 cm, switch off.
 
@@ -67,7 +67,7 @@ mode: single
 - The water level sensor is very accurate — genuinely surprised for the price.
 - The whole setup (2x RS-485 converter, 1x level sensor) consumes about 1 W while reading every 5 seconds.
 
-![Graphs in Home Assistant](/img/smart-water-management/ha.png)
+![Graphs in Home Assistant](../../static/img/smart-water-management/ha.png)
 
 ## Challenges
 

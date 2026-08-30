@@ -25,7 +25,7 @@ Due to the AD origin, created by Microsoft around year 2000 which is when Micros
 
 On the same page, forming an AD installation requires some knowledge. Here comes Amazon AWS with [AWS Directory Service](https://aws.amazon.com/directoryservice/), which delivers AD as a Service. AWS delivers several flavors of AD installations, but all flavors deliver fully functional AD installation within a matter of minutes after installation. The AD can be installed through AWS web console, AWS Cloudformation, or [Terraform](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/directory_service_directory). The advantage of AD delivered by AWS is its integration allowing SSO or server joining through *Launch instance* form. 
 
-![Launch instance - join form](/img/aws-ds-seamless-join/managed-AD-v2-05-2.png)
+![Launch instance - join form](../../static/img/aws-ds-seamless-join/managed-AD-v2-05-2.png)
 
 This joining method is a great acceleration for server joining to AD. This functionality was only usable by Windows server, and recently has been enabled for GNU\\Linux distributions with AWS SSM agent VERSION (TODO) installed. No surprise, this embedded joining process uses AWS System Manager (SSM) Run Document module in the background. Specifically, AWS SSM provides the managed document *AWS-JoinDirectoryServiceDomain*, which can be easily used. The example of a Windows server joining is attached in *[ec2-management.tf](https://github.com/lejmr/docs-aws-ds-seamlessjoin/blob/master/ec2-management.tf)*.
 
@@ -100,7 +100,7 @@ AWS does not provide such a functionality, but other services can be used for pa
 
 The whole chain is depicted in the following diagram. 
 
-![Service chain necessary for automatic registration and deregistration](/img/aws-ds-seamless-join/highlevel-joining.png)
+![Service chain necessary for automatic registration and deregistration](../../static/img/aws-ds-seamless-join/highlevel-joining.png)
 
 Notably, the path forming the computer deregistration terminates by the step using LDAP protocol directly. The deregistration is perfomed not from the EC2 instance using an AWS API call, but from the AWS Lambda function's runtime environment, as AWS does not provide direct interaction with AD object via its API. In other words, the AWS Lambda function needs an elastic network interface (ENI) attached to a subnet that has IP connectivity with AD.
 
@@ -190,7 +190,7 @@ Lets have an server *i-05b61d6472ddb05d3* with IP address *10.0.101.197*.
 * The computer object should be in *Computer* directory
 * If the expected computer is missing, here we are at the beggining of the rabbit hole. Go to step 2).
 
-![List of computers in AD](/img/aws-ds-seamless-join/computers.png)
+![List of computers in AD](../../static/img/aws-ds-seamless-join/computers.png)
 
 Notice the *Name* and *Description* fields, these should be used for server identification
 
@@ -223,7 +223,7 @@ Notice the *Name* and *Description* fields, these should be used for server iden
 * Alternativelly, search for lines indicating AWS SSM documentat has ben associated with the EC2 instance.
   * `* Initiating join EXAMPLE-JoinDirectoryServiceDomain for instance i-05b61d6472ddb05d3`
   * `{'AssociationDescription': {'Name': 'EXAMPLE-JoinDirectoryServiceDomain', 'AssociationVersion': '1', 'Date': datetime.datetime(2021, 1, 23, 19, 5, 55, 332000, tzinfo=tzlocal()), 'LastUpdateAssociationDate': datetime.datetime(2021, 1, 23, 19, 5, 55, 332000, tzinfo=tzlocal()), 'Overview': {'Status': 'Pending', 'DetailedStatus': 'Creating'}, 'DocumentVersion': '$DEFAULT', 'Parameters': {'directoryId': ['d-936707b662'], 'directoryName': ['ad.domain.test'], 'directoryOU': ['CN=Computers,DC=ad,DC=domain,DC=test'], 'dnsIpAddresses': ['10.0.2.234 10.0.1.189']}, 'AssociationId': 'e2df9c8c-6999-47f1-9f95-edfde9545485', 'Targets': [{'Key': 'InstanceIds', 'Values': ['i-05b61d6472ddb05d3']}], 'ApplyOnlyAtCronInterval': False}, 'ResponseMetadata': {'RequestId': '76b4a3c7-e1f8-4d90-aba0-d1687b64f4fd', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 23 Jan 2021 19:05:55 GMT', 'content-type': 'application/x-amz-json-1.1', 'content-length': '588', 'connection': 'keep-alive', 'x-amzn-requestid': '76b4a3c7-e1f8-4d90-aba0-d1687b64f4fd'}, 'RetryAttempts': 0}}`
-* Search for status of the AWS SSM Association: ![AWS SSM Association status](/img/aws-ds-seamless-join/awsssm.png)
+* Search for status of the AWS SSM Association: ![AWS SSM Association status](../../static/img/aws-ds-seamless-join/awsssm.png)
 
 3) Verify the status of the EC2 instance directly
 * Login using technical account is necessary. 

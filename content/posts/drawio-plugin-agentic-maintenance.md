@@ -70,4 +70,4 @@ Write the definition of *done* before you ask for the work. It sounds easy, but 
 ## What is going to be the future for this project?
 
 
-To be honest, nothing is going to change much from my side, I still won't be using the plugin, but I am hopeful I have put together enough automation such that integration of features is going to be simpler hence faster and this repo won't go stale again. If it does, it contains six years of fixes and ideas integrated..
+To be honest, nothing is going to change much from my side, I still won't be using the plugin, but I am hopeful I have put together enough automation such that integration of features is going to be simpler hence faster and this repository will not go stale again. And if it does, it now carries six years of fixes and ideas, integrated.

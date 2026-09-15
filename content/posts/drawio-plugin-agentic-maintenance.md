@@ -1,15 +1,15 @@
 ---
-title: "I let agents maintain my abandoned DokuWiki plugin. Here is what I prompted wrong."
+title: "DokuWiki draw.io plugin revamp"
 date: 2026-09-15
 draft: true
 tags: [ai, agents, claude-code, dokuwiki, maintenance, testing]
 ---
 
-In 2018 I wrote a small [DokuWiki plugin](https://github.com/lejmr/dokuwiki-plugin-drawio) that embeds [draw.io](https://www.drawio.com) diagrams into wiki pages. Then life happened. Issues kept arriving — thirteen of them open, some for years — and every few months I felt bad about it and did nothing. The plugin is still in the top 5 % of the DokuWiki plugin catalogue by popularity, people fork it and fix it for themselves, and I simply do not have the evenings.
+In 2018 I wrote a small [DokuWiki plugin](https://github.com/lejmr/dokuwiki-plugin-drawio) that embeds [draw.io](https://www.drawio.com) diagrams into wiki pages. Then life happened. Issues kept arriving, and every time I looked into my github profile I felt bad about it and did nothing because I stopped using it around year 2021. The plugin is still in the top 5 % of the DokuWiki plugin catalogue by popularity, people fork it and fix it for themselves.
 
-So the experiment was not "can AI write a feature". It was: **can I set up a flow where agents integrate external changes, fix issues, and keep the thing alive, with me doing only the clicking?** The repository will lie dormant again; whatever I build has to survive that.
+So the experiment was not "can AI write a feature". It was: **can I set up a flow where agents integrate external changes, fix issues, and keep the thing alive, with me doing only the validation?**. And it would be me if I did not want to have basic features under tests, so I know exactly what is breaking and whatnot.
 
-It worked in the end. But for about two days it *looked* like it worked while nothing did, and the reason was mostly how I prompted.
+From whole process I have quite mixed feelings because I started Sunday evening, and Monday evening I triggered Fable 5 to speed things up since the whole previous work I handled via mobile during day, so I could not test things, and Claude was confident that everything was going just fine. When I got to the computer, I realized that everything works and nothing works at the same time.
 
 <!--more-->
 
@@ -49,24 +49,25 @@ I switched the main session to a newer model (Fable), and this is where I have t
 - **A validation plan written before anything is run**, by a different agent than the one executing it. Machine phases M0–M6: static checks, the suites, a *fresh container from scratch*, every context opened in a real headless browser, my server-side path replayed with `curl`, every `SECURITY.md` claim re-attacked, log diff at the end.
 - **Evidence rules that a model cannot talk its way around.** Evidence is literal output — status code, DOM excerpt, `sha256` — not a paraphrase. A browser step passes only with *zero* console errors **and** a named positive element in the DOM; a clean console with the element missing is a fail, because function hoisting makes a dead script look alive. Nothing may be planted by hand; if a step only passes with help, it fails. Stop rules: abort on the first failure in the phases that matter.
 - **Golden and extra test tiers.** Every feature has exactly one golden test that proves the happy path a user would take, run first and fast-failing in CI; everything else is "extra". Filesystem-delta assertions after every write path: here is the whole data directory before, here it is after, these three files and nothing else may differ.
-- **Batches of five.** I get five browser steps with a "good =" column, I answer `1 good / 4 ko: ...`, and nothing new gets built until the batch is green. Feature freeze during validation.
 
 The first executor run under that plan stopped at phase M5.4 with a real finding: the ODT export was cached per page, not per viewer, so whoever exported first decided what everyone after got. It also found a stray draw.io chunk inside the plugin's own placeholder image — shipped since 2020 — which the new bulk conversion happily offered to "recover" as a diagram. Neither would have surfaced from reading code. Both surfaced from a rule that says *run it from nothing and show me the bytes*.
 
-After that, batches passed. Not because the model got smarter, but because "done" finally meant something I could check.
+> After that, batches passed. Not because the model got smarter, but because "done" finally meant something I could check!!!
 
-## The flow I am left with
+## The flow I am going to keep for this project
 
-This is the part that matters for a repository that will sleep again:
-
-- CI runs weekly against DokuWiki `stable`, `oldstable` and `master`, so a DokuWiki release that breaks the plugin shows up before the next issue does. `master` is informational; a contributor two years from now should not be blocked by an unreleased DokuWiki.
+- CI runs weekly against DokuWiki `stable`, `oldstable` and `master`, so a DokuWiki release that breaks the plugin shows up before the next issue does. 
 - Releasing is a button: *Actions → Release → Run workflow* bumps the date, tags, runs the tests, builds the zip with `git archive` so development files never ship, and writes the changelog into the release. No local scripts; I can do it from my phone.
-- A scheduled check opens an issue when the dokuwiki.org listing goes stale.
 - The forks got looked at, and one fix (diagram names with dots) came straight from a fork I had never merged. Integrating external changes is now a task I can hand to an agent with the same validation plan, which was the original motivation.
 - The merge itself: seventeen topical pull requests, each a single commit whose *tree* is a snapshot of the validated history, squash-merged in order with a script that checks after every merge that `master`'s tree is byte-identical to the expected one. No conflict resolution, no drift between what was clicked through and what shipped.
 
 ## If you take one thing
 
-Write the definition of *done* before you ask for the work, make it something a shell command can contradict, and have somebody other than the builder run it from an empty machine. Everything else — model choice, reviewer count, reasoning effort — is noise compared to that.
+Write the definition of *done* before you ask for the work. It sounds easy, but in this type of development it means, you must go over features and distil the specification, formalize it, and then let agent execute against that. All that can be prompt, but you should validate the structure. Everything else such as model choice, reviewer count, reasoning effort is noise compared to that.
 
-And open the page in a browser. It costs one `ls`.
+
+
+## What is going to be the future for this project?
+
+
+To be honest, nothing is going to change much from my side, I still won't be using the plugin, but I am hopeful I have put together enough automation such that integration of features is going to be simpler hence faster and this repo won't go stale again. If it does, it contains six years of fixes and ideas integrated..

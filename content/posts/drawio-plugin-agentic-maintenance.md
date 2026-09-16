@@ -75,6 +75,14 @@ The next morning I pointed the same setup at another repository I had abandoned:
 
 **The honest outcome.** Halfway through, while deciding how the mail server should evolve, I looked at what exists today and found [Stalwart](https://stalw.art) - a single binary that does what eleven daemons in my image do. The right call was not to pretend otherwise: the refresh shipped as version 1.8.8 for the people who still run the old image, with a README that says, in the first paragraph, to use Stalwart for anything new. Maintaining software honestly sometimes means telling users to leave.
 
+## What it cost
+
+Three days of wall clock, Sunday evening to Wednesday evening, across two repositories. On my side: 289 messages, most of them from my phone during the day, and four rounds of clicking through a checklist of five steps each - the only work the machine could not do, because it needed a browser, a draw.io editor and, at the end, an iPhone.
+
+On the machine's side, counted from the session transcripts rather than guessed: **89 agents spawned**, **7 234 shell commands**, **7.1 million tokens written**, **59.6 million tokens of fresh context**, and **3.1 billion tokens read back from cache** - the last number is what an agentic loop really costs, because every turn re-reads the whole conversation. The bill for that lives in my account, not in this post; token counts travel better than prices that change every quarter.
+
+Two numbers from that are worth keeping side by side: the JavaScript bug that broke every plugin on the page would have been caught by one `ls` of the tool directory followed by one headless-browser load, and it survived roughly seven agent runs and over a million tokens of review instead. Compute is cheap; a wrong definition of *done* is not.
+
 ## If you take one thing
 
 Write the definition of *done* before you ask for the work. It sounds easy, but in this type of development it means, you must go over features and distil the specification, formalize it, and then let agent execute against that. All that can be prompt, but you should validate the structure. Everything else such as model choice, reviewer count, reasoning effort is noise compared to that.

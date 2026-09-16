@@ -64,7 +64,6 @@ What came out of it boots two mail servers and a DNS sidecar, publishes each ser
 
 Halfway through I also found [Stalwart](https://stalw.art), one binary doing roughly what eleven daemons do in my image. That changed the goal. The refresh shipped as [1.8.8](https://github.com/lejmr/iredmail-docker/releases/tag/1.8.8) for people who already run the old thing, and the README now tells everybody else to go use Stalwart. Stalwart looks beautiful. It speaks JMAP, so you can put your own webmail, calendar and contacts on top of it and have your private space far more easily than with iRedMail. Although, with both of them dockerized, most users will not notice the difference!
 
-
 ## What it cost
 
 Three days of wall clock over two repositories. My side: 289 messages, most of them typed on a phone, and four rounds of clicking through a five-step checklist. That was the only part the machine could not do for me.

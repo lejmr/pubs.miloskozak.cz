@@ -83,12 +83,12 @@ On the machine's side, counted from the session transcripts rather than guessed:
 
 At list prices that is **about $1 250**, and the split is the interesting part:
 
-| | output | cache read | cost |
-|---|---|---|---|
-| Sonnet (the implementers and sceptics) | 4.3 M | 2 069 M | $556 |
-| Opus (the main session) | 1.6 M | 557 M | $384 |
-| Fable (the main session, day two) | 1.2 M | 520 M | $309 |
-| Haiku | 0.01 M | 4.7 M | $1 |
+| model | role | output | cache read | cost |
+|---|---|---|---|---|
+| Sonnet 5 | the implementers and sceptics - 89 agents | 4.3 M | 2 069 M | $556 |
+| Opus 5 | the main conversation on day one, and the reviews | 1.6 M | 557 M | $384 |
+| Fable 5.1 | the main conversation from day two on | 1.2 M | 520 M | $309 |
+| Haiku 4.5 | odd jobs | 0.01 M | 4.7 M | $1 |
 
 The cheap model is the expensive line. Eighty-nine agents, each re-reading its own context on every turn, outweigh one expensive session by a wide margin - over ninety per cent of that bill is cache reads, not thinking. If you want to spend less, the lever is fewer, better-briefed agents, not a cheaper model.
 

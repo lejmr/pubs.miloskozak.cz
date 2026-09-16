@@ -18,7 +18,7 @@ The numbers looked great. Twelve of thirteen issues closed, each with a test. A 
 
 Then I opened the wiki and clicked.
 
-The "Edit with draw.io" button threw `TypeError: Cannot read properties of null` on `JSINFO.id`. Sounds small. DokuWiki glues every plugin's JavaScript into one file, so that exception killed every plugin loaded after mine in that file. Including my own button. Five layers of review had signed it off.
+The "Edit with draw.io" button threw `TypeError: Cannot read properties of null` on `JSINFO.id`. DokuWiki glues every plugin's JavaScript into one file, so that exception killed every plugin loaded after mine in that file. Including my own button. Five layers of review had signed it off.
 
 Search never found text inside diagrams either. The indexer only runs when somebody views a page, nobody had viewed one after saving, and the tests were writing index entries by hand. And the checklist I was told to follow asked me to rename a diagram in a wiki with no move plugin installed, and to click an image nobody had ever created.
 
@@ -28,9 +28,9 @@ The honest answer: the agents tested exactly what they were told to test. I neve
 
 ## What I prompted wrong
 
-I asked for outcomes and took lists. "Fix all the issues, give me a list of things to try" gets you a list. Nothing in that sentence says the list has to be doable on a wiki that starts empty, so I got a checklist for a wiki that existed only in the agent's head.
+I asked for results and accepted a checklist as the proof. "Fix all the issues, give me a list of things to try" gets you exactly that: a list. Nothing in that sentence says the list has to be doable on a wiki that starts empty, so I got a checklist for a wiki that existed only in the agent's head.
 
-I let "tests pass" stand for "it works". 160 tests and not one of them opened a browser. Headless Chrome was sitting on that machine the whole time. One `ls` and one page load would have killed the JavaScript bug on day one. Instead it survived seven agent runs and about a million tokens of review, none of which can execute a line of JavaScript.
+I let "tests pass" stand for "it works". 160 tests, not one of them opened a browser, and headless Chrome was sitting on that machine the whole time. One `ls` and one page load would have killed the JavaScript bug on day one. Instead it survived seven agent runs and about a million tokens of review, none of which can execute a line of JavaScript.
 
 I stacked reviewers instead of asking for evidence. Sceptic, arbiter, consistency pass, each one reading the previous one's claims. Reviewers reading prose end up agreeing with the prose.
 
@@ -60,7 +60,7 @@ Next morning I pointed it at another repository I had abandoned: a [Docker image
 
 This time the table came first. Twenty-one rows, written the way somebody running a mail server would say it. Not "Postfix accepts on 587 with STARTTLS" but "a user sends mail to another server and it arrives". Not "quota plugin enabled" but "when I set a 1 MB quota, the message over the limit gets refused and is never silently lost".
 
-What came out of it boots two mail servers and a DNS sidecar, publishes each server's DKIM key into the zone and sends mail between them, so the `dkim=pass` in the receiver's headers is real. Then a sceptic agent, briefed to break the thing rather than review it, went through the image. Backups that contained zero mail, because tar had archived a symlink instead of the mail store. A restart that put every password back to its build-time placeholder. Plaintext IMAP listening on the network. Quotas never enforced for authenticated senders. And the "snakeoil" private key baked into the image, the same one for everybody who ever pulled it. I would not have found those by reading code. I am not sure I would have found them at all.
+What came out of it boots two mail servers and a DNS sidecar, publishes each server's DKIM key into the zone and sends mail between them, so the `dkim=pass` in the receiver's headers is real. Then a sceptic agent, whose brief was to break it rather than review it, went through the image and found backups that contained zero mail (tar had archived a symlink), a restart that reset every password back to a build-time placeholder, plaintext IMAP listening on the network, quotas never enforced for authenticated senders, and the shared "snakeoil" private key baked into the image for everybody who ever pulled it. I would not have found those by reading code. I am not sure I would have found them at all.
 
 The badge needed one more fight. The first gate printed `required rows not passing: [10]` and the job went green anyway, because `python3 … | tee` gives you the exit code of `tee`. So: every row required, a skipped test counts as failed, and the release button refuses to publish unless all twenty-one pass.
 

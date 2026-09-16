@@ -79,7 +79,18 @@ The next morning I pointed the same setup at another repository I had abandoned:
 
 Three days of wall clock, Sunday evening to Wednesday evening, across two repositories. On my side: 289 messages, most of them from my phone during the day, and four rounds of clicking through a checklist of five steps each - the only work the machine could not do, because it needed a browser, a draw.io editor and, at the end, an iPhone.
 
-On the machine's side, counted from the session transcripts rather than guessed: **89 agents spawned**, **7 234 shell commands**, **7.1 million tokens written**, **59.6 million tokens of fresh context**, and **3.1 billion tokens read back from cache** - the last number is what an agentic loop really costs, because every turn re-reads the whole conversation. The bill for that lives in my account, not in this post; token counts travel better than prices that change every quarter.
+On the machine's side, counted from the session transcripts rather than guessed: **89 agents spawned**, **7 234 shell commands**, **7.1 million tokens written**, **59.6 million tokens of fresh context**, and **3.1 billion tokens read back from cache** - the last number is what an agentic loop really costs, because every turn re-reads the whole conversation.
+
+At list prices that is **about $1 250**, and the split is the interesting part:
+
+| | output | cache read | cost |
+|---|---|---|---|
+| Sonnet (the implementers and sceptics) | 4.3 M | 2 069 M | $556 |
+| Opus (the main session) | 1.6 M | 557 M | $384 |
+| Fable (the main session, day two) | 1.2 M | 520 M | $309 |
+| Haiku | 0.01 M | 4.7 M | $1 |
+
+The cheap model is the expensive line. Eighty-nine agents, each re-reading its own context on every turn, outweigh one expensive session by a wide margin - over ninety per cent of that bill is cache reads, not thinking. If you want to spend less, the lever is fewer, better-briefed agents, not a cheaper model.
 
 Two numbers from that are worth keeping side by side: the JavaScript bug that broke every plugin on the page would have been caught by one `ls` of the tool directory followed by one headless-browser load, and it survived roughly seven agent runs and over a million tokens of review instead. Compute is cheap; a wrong definition of *done* is not.
 

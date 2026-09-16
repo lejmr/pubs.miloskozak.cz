@@ -30,9 +30,9 @@ The honest answer: the agents tested exactly what they were told to test. I neve
 
 I asked for results and accepted a checklist as the proof. "Fix all the issues, give me a list of things to try" gets you exactly that: a list. Nothing in that sentence says the list has to be doable on a wiki that starts empty, so I got a checklist for a wiki that existed only in the agent's head.
 
-I let "tests pass" stand for "it works". 160 tests, not one of them opened a browser, and headless Chrome was sitting on that machine the whole time. One `ls` and one page load would have killed the JavaScript bug on day one. Instead it survived seven agent runs and about a million tokens of review, none of which can execute a line of JavaScript.
+I let "tests pass" stand for "it works". 160 tests, not one of them opened a browser, and headless Chrome was sitting on that machine all along. One `ls` and one page load would have killed the JavaScript bug on day one. Instead it survived seven agent runs and about a million tokens of review, none of which can execute a line of JavaScript.
 
-I stacked reviewers instead of asking for evidence. Sceptic, arbiter, consistency pass, each one reading the previous one's claims. Reviewers reading prose end up agreeing with the prose.
+Then came the reviewers, stacked instead of asked for evidence: sceptic, arbiter, consistency pass, each one reading the previous one's claims. Reviewers reading prose end up agreeing with the prose.
 
 I read "verified end to end" and believed it. It had been verified end to end in PHPUnit, with fixtures the agent planted itself.
 
@@ -40,9 +40,9 @@ And the one I like least: the agent that decided what "done" meant was the same 
 
 ## The skill that came out of it
 
-Somewhere in the middle of this I stopped patching symptoms and wrote the process down. It lives outside the repositories now, as a skill I hand to whatever model is doing the work:
+Somewhere in the middle of this I stopped patching symptoms and wrote the process down. It lives in my `~/.claude/skills/` now and I plan to use it more often:
 
-- The definition of done is a table, in the words of the person who runs the thing, agreed before anything gets built.
+- The definition of done is a table, in the words of the person who runs the thing, agreed before anything gets built. It tracks the features over time: it grows when I add one, and rows disappear when a behaviour changes.
 - Each row says how it is observed (the exact command or click), what the output must literally be, and whether the machine checks it or I do.
 - Tests are those rows, one to one. They only speak public interfaces, so they survive swapping out whatever sits underneath.
 - Fresh environment, nothing planted. If a step only passes after somebody helps it, it failed.
@@ -56,15 +56,14 @@ Nine bullets and eight of them are there because I got burned in the first two d
 
 ## Tuesday: the same skill, a dead mail server
 
-Next morning I pointed it at another repository I had abandoned: a [Docker image of iRedMail](https://github.com/lejmr/iredmail-docker), last built in 2021 on CentOS 7, 23 open issues, 69 thousand pulls on Docker Hub. CentOS 7 has no package mirror anymore, so the thing could not even be built.
+Next morning I was thinking to myself: refresh iredmail-docker, or archive it? Same story as the plugin. It is stale and it still has a lot of users. So, let's give it a try, and I pointed Claude Code at another repository I had abandoned: a [Docker image of iRedMail](https://github.com/lejmr/iredmail-docker), last built in 2021 on CentOS 7, 23 open issues, 69 thousand pulls on Docker Hub. CentOS 7 has no package mirror anymore, so the thing could not even be built.
 
 This time the table came first. Twenty-one rows, written the way somebody running a mail server would say it. Not "Postfix accepts on 587 with STARTTLS" but "a user sends mail to another server and it arrives". Not "quota plugin enabled" but "when I set a 1 MB quota, the message over the limit gets refused and is never silently lost".
 
-What came out of it boots two mail servers and a DNS sidecar, publishes each server's DKIM key into the zone and sends mail between them, so the `dkim=pass` in the receiver's headers is real. Then a sceptic agent, whose brief was to break it rather than review it, went through the image and found backups that contained zero mail (tar had archived a symlink), a restart that reset every password back to a build-time placeholder, plaintext IMAP listening on the network, quotas never enforced for authenticated senders, and the shared "snakeoil" private key baked into the image for everybody who ever pulled it. I would not have found those by reading code. I am not sure I would have found them at all.
+What came out of it boots two mail servers and a DNS sidecar, publishes each server's DKIM key into the zone and sends mail between them, so the `dkim=pass` in the receiver's headers is real. Then a sceptic agent, briefed to break it rather than review it, went through the image. Backups that contained zero mail, because tar had archived a symlink. A restart that put every password back to its build-time placeholder. Plaintext IMAP listening on the network. Quotas never enforced for authenticated senders. The shared "snakeoil" private key baked into the image for everybody who ever pulled it. I would not have found those by reading code. I'm not sure I would have found them at all.
 
-The badge needed one more fight. The first gate printed `required rows not passing: [10]` and the job went green anyway, because `python3 … | tee` gives you the exit code of `tee`. So: every row required, a skipped test counts as failed, and the release button refuses to publish unless all twenty-one pass.
+Halfway through I also found [Stalwart](https://stalw.art), one binary doing roughly what eleven daemons do in my image. That changed the goal. The refresh shipped as [1.8.8](https://github.com/lejmr/iredmail-docker/releases/tag/1.8.8) for people who already run the old thing, and the README now tells everybody else to go use Stalwart. Stalwart looks beautiful. It speaks JMAP, so you can put your own webmail, calendar and contacts on top of it and have your private space far more easily than with iRedMail. Although, with both of them dockerized, most users will not notice the difference!
 
-Halfway through I also found [Stalwart](https://stalw.art), one binary doing roughly what eleven daemons do in my image. That changed the goal. The refresh shipped as [1.8.8](https://github.com/lejmr/iredmail-docker/releases/tag/1.8.8) for people who already run the old thing, and the README now tells everybody else to go use Stalwart.
 
 ## What it cost
 
@@ -83,6 +82,6 @@ That surprised me. The cheap model is the biggest line on the bill, because 89 S
 
 ## What I am not promising
 
-Write down what *done* means before you ask for the work. Sounds obvious, it is not. It means going through the features, distilling a specification out of them, formalising it, and only then letting an agent run against it. All of that can live in a prompt, but the structure is yours to validate. Model choice, number of reviewers, reasoning effort, all noise next to that.
+Write down what *done* means before you ask for the work. Sounds obvious, it isn't. It means going through the features, distilling a specification out of them, formalising it, and only then letting an agent run against it. All of that can live in a prompt, but the structure is yours to validate. Model choice, number of reviewers, reasoning effort, all noise next to that.
 
 I promise nothing about the future of either project. I did put automated pipelines into both: tests on every change, a weekly rebuild against current dependencies, a release button I can press from a phone, and a watchdog that goes red and mails me when something actually needs a human. That should keep them healthy on their own for a while. If they do go quiet again, they carry six years of fixes and ideas now, integrated.

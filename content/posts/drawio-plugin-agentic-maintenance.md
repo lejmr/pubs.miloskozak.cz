@@ -1,5 +1,5 @@
 ---
-title: "DokuWiki draw.io plugin revamp"
+title: "My used-to-be-loved projects, refreshed with Claude"
 date: 2026-09-16
 draft: true
 tags: [ai, agents, claude-code, dokuwiki, maintenance, testing]

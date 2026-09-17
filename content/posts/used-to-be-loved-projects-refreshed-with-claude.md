@@ -81,6 +81,6 @@ That surprised me. The cheap model is the biggest line on the bill, because 89 S
 
 ## Conclusion
 
-Write down what *done* means before you ask for the work. Sounds obvious, it isn't. It means going through the features, distilling a specification out of them, formalising it, and only then letting an agent run against it. All of that can live in a prompt, but the structure is yours to validate. Model choice, number of reviewers, reasoning effort, all noise next to that.
+Write down what *done* means before you ask for the work. It means going through the features, distilling a specification out of them, formalising it, and only then letting an agent run against it. All of that surely will come from a prompt, but the structure is the key ingredient that helps you validate the output. Model choice, number of reviewers, reasoning effort, all noise next to that.
 
-I promise nothing about the future of either project. I did put automated pipelines into both: tests on every change, a weekly rebuild against current dependencies, a release button I can press from a phone, and a watchdog that goes red and mails me when something actually needs a human. That should keep them healthy on their own for a while. If they do go quiet again, they carry six years of fixes and ideas now, integrated.
+I promise nothing about the future of either project. I did put automated pipelines into both: tests on every change, a weekly rebuild against current dependencies, and a watchdog that goes red and mails me when something actually needs a human. That should keep them healthy on their own for a while. If they do go quiet again, they carry six years of fixes and ideas now, integrated.

@@ -79,7 +79,7 @@ The machine's side, counted from the transcripts, not guessed: 89 agents, 7 234 
 
 That surprised me. The cheap model is the biggest line on the bill, because 89 Sonnet agents re-reading their own context outweigh the expensive session I was typing into, and over ninety per cent of the money went on cache reads rather than thinking. Fewer agents with better briefs, then. Not a cheaper model.
 
-## What I am not promising
+## Define done first
 
 Write down what *done* means before you ask for the work. Sounds obvious, it isn't. It means going through the features, distilling a specification out of them, formalising it, and only then letting an agent run against it. All of that can live in a prompt, but the structure is yours to validate. Model choice, number of reviewers, reasoning effort, all noise next to that.
 

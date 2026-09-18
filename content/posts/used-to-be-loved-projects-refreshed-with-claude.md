@@ -79,7 +79,15 @@ The machine's side, counted from the transcripts, not guessed: 89 agents, 7 234 
 
 That surprised me. The cheap model is the biggest line on the bill, because 89 Sonnet agents re-reading their own context outweigh the expensive session I was typing into, and nine tenths of the money went on re-reading context rather than producing output. Fewer agents with better briefs, then. Not a cheaper model.
 
-Split by project, two thirds of that went on the plugin and one third on the mail server. The second refresh was the bigger job, CentOS 7 to Debian 13 with twenty-one acceptance rows, and it took seventeen agents where the plugin took seventy-two. Nothing had to be built twice.
+Split by phase across the two projects, the plugin cost twice what the mail server did, and more than half of the plugin's bill bought the version I broke with one click on Monday evening.
+
+| phase | agents | cost |
+|---|---|---|
+| the plugin, built blind | 44 | $437 |
+| the plugin, repaired and validated | 28 | $341 |
+| the mail server, from the first prompt to the release | 17 | $389 |
+
+The mail server was the bigger job, CentOS 7 to Debian 13 with twenty-one acceptance rows, and it ran in under a day on a third of the agents. Nothing had to be built twice.
 
 ## Conclusion
 

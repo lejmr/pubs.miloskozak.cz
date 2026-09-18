@@ -77,7 +77,9 @@ The machine's side, counted from the transcripts, not guessed: 89 agents, 7 234 
 | Fable 5.1 | main conversation from day two on | 1.2 M | 520 M | $309 |
 | Haiku 4.5 | odd jobs | 0.01 M | 4.7 M | $1 |
 
-That surprised me. The cheap model is the biggest line on the bill, because 89 Sonnet agents re-reading their own context outweigh the expensive session I was typing into, and over ninety per cent of the money went on cache reads rather than thinking. Fewer agents with better briefs, then. Not a cheaper model.
+That surprised me. The cheap model is the biggest line on the bill, because 89 Sonnet agents re-reading their own context outweigh the expensive session I was typing into, and nine tenths of the money went on re-reading context rather than producing output. Fewer agents with better briefs, then. Not a cheaper model.
+
+Split by project, two thirds of that went on the plugin and one third on the mail server. The second refresh was the bigger job, CentOS 7 to Debian 13 with twenty-one acceptance rows, and it took seventeen agents where the plugin took seventy-two. Nothing had to be built twice.
 
 ## Conclusion
 

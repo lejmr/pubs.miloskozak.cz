@@ -94,3 +94,13 @@ The mail server was the bigger job, CentOS 7 to Debian 13 with twenty-one accept
 Write down what *done* means before you ask for the work. It means going through the features, distilling a specification out of them, formalising it, and only then letting an agent run against it. All of that surely will come from a prompt, but the structure is the key ingredient that helps you validate the output. Model choice, number of reviewers, reasoning effort, all noise next to that.
 
 I promise nothing about the future of either project. I did put automated pipelines into both: tests on every change, a weekly rebuild against current dependencies, and a watchdog that goes red and mails me when something actually needs a human. That should keep them healthy on their own for a while. If they do go quiet again, they carry six years of fixes and ideas now, integrated.
+
+## Update, 2 October: somebody clicked
+
+Two weeks after this went out, an issue landed titled [AI nuked this repo](https://github.com/lejmr/dokuwiki-plugin-drawio/issues/110).
+
+The regression was real. The refreshed plugin called `dokuwiki\File\MediaResolver`, a core class that only exists since DokuWiki 2022-07-31. On 2018-04-22c and 2020-07-29a any page with `{{drawio}}` died with `Class not found`. My table, my browser checks and my CI covered master, stable and oldstable. I honestly thought it was enough, but at the same time I remember being reluctant to update DokuWiki regularly myself, so testing the main stream of versions is really a no-brainer, but testing older versions is meaningful for such a plugin as well!
+
+The fix, [#111](https://github.com/lejmr/dokuwiki-plugin-drawio/pull/111), was merged the same day, and CI now renders a `{{drawio}}` page on four old releases going back to 2018. Whole test suite expands to cover older versions as well. My hope is newer features will be less disruptive to even older versions!
+
+![GitHub Actions](../../static/img/used-to-be-loved-projects-refreshed-with-claude/github-actions-drawio.png)

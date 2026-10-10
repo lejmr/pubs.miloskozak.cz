@@ -15,12 +15,15 @@ html, body, #wrapper {
 .content pre, .content .chroma, .content .highlight, .content .bg {
     background: #f6f6f6 !important;
 }
+html {
+    font-size: 11pt !important; /* headings are in rem */
+}
 #wrapper {
     padding: 0;
     min-height: 0;
     color: #000;
-    font-size: 11pt;
-    line-height: 1.5;
+    font-size: 10.5pt;
+    line-height: 1.45;
 }
 
 /* Only the article: no site header, tags, TOC, buttons, comments, pager */
@@ -41,11 +44,11 @@ hr.head-rule,
     margin: 0 0 1.5rem 0;
 }
 #main .post-title {
-    font-size: 22pt;
+    font-size: 20pt;
     line-height: 1.25;
 }
 #main .publish-metadata {
-    font-size: 10pt;
+    font-size: 9.5pt;
     color: #555;
 }
 #main .publish-metadata svg {
@@ -71,7 +74,7 @@ pre, table, blockquote, figure, img {
     overflow-wrap: anywhere;
     overflow: visible;
     border: 1px solid #ccc;
-    font-size: 8.5pt;
+    font-size: 8pt;
     line-height: 1.4;
 }
 .content code {
@@ -116,7 +119,7 @@ pre, table, blockquote, figure, img {
 }
 #footer .print-site {
     display: block;
-    font-size: 11pt;
+    font-size: 10pt;
     color: #000;
     margin-bottom: 0.2rem;
 }

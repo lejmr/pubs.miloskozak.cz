@@ -1,11 +1,11 @@
 ---
 title: "I built a HOCON conformance suite. It found bugs in the reference implementation."
-date: 2026-10-04
+date: 2026-10-10
 tags: [hocon, testing, zig, parsing]
-draft: true
+draft: false
 ---
 
-I have used [HOCON](https://github.com/lightbend/config/blob/main/HOCON.md) in production for years. I like the format because it is readable and it composes, so one config can be shared across multiple environments. As a Python developer, my ultimate combo for config management is [Pydantic](https://pydantic.dev) + [pyhocon](https://github.com/chimpler/pyhocon).
+I have used [HOCON](https://github.com/lightbend/config/blob/main/HOCON.md) in production for years. I like the format because it is readable and it allows config file composition, so it allows simple multi-environment config shared config files overrides minimizing config differences. As a Python developer, my ultimate combo for config management is [Pydantic](https://pydantic.dev) + [pyhocon](https://github.com/chimpler/pyhocon).
 
 I like to try new things, so this June my eyes landed on [Zig](https://ziglang.org/). I wanted to go back to the roots of programming and see what a modern "C" feels like. After reading the language reference I needed a project, and knowing the Java and Python implementations of HOCON don't fully agree, it gave me an idea: "Zig has a native C interface, so why not write HOCON in Zig and expose it through C shim? Then every language can share one implementation. Magic!"
 
@@ -52,7 +52,7 @@ suite/string-value-concatenation/010-object-then-scalar-drops-the-scalar.json
 
 The expected values were seeded from lightbend/config 1.4.9 through a small [oracle script](https://github.com/lejmr/zig-hocon/tree/main/tools/oracle) that takes a config on stdin and prints JSON. Then every row was read against the sentence it stands for. Where the two agree, fine. Where they don't, the spec decides `expect`, and the row also records what Java actually does (`java_expect` or `java_error`). The spec is the reference, Java is the oracle for reality.
 
-So there are two scores per implementation. **Spec mode**: does it do what HOCON says. **Java mode**: does it do what lightbend/config does, which is the bar if you just need production configs to keep parsing.
+So there are two scores per implementation. **Spec mode**: does it do what HOCON says. **Java mode**: does it do what lightbend/config does, which is the bar if you just need production configs to keep parsing against java as standard.
 
 | 445 cases | spec mode | java mode |
 |---|---|---|
@@ -68,7 +68,7 @@ None of this is specific to HOCON. Any format whose spec is prose and whose trut
 
 Full disclosure: the parser itself (tokenizer, parser, value graph, conversion and the public API) is written by hand, learning Zig was the point. I used Claude for the tooling around it: the oracle wrappers, the conformance runner and report generator, and drafting part of the conformance cases. Expected values never come from a model. They come from running lightbend/config and are then checked by hand against the spec text.
 
-The 43 rows where spec and Java part ways are the interesting part. Three of them, in increasing order of how much they surprised me.
+The 43 rows where spec and Java part ways fall into about a dozen categories, half of them deliberate leniency rather than bugs. Three of them, in increasing order of how much they surprised me.
 
 ## Three findings
 ### 1. The trailing text that disappears
@@ -138,7 +138,7 @@ While building the suite I sent several fixes upstream. Four are already merged 
 
 None of this is negligence. The spec was written alongside one implementation, and for years that implementation *was* the test suite. Where the prose is vague, the code decided, and every other implementation (pyhocon, the Rust crates, the Go and .NET ones) read the prose, hit an edge case, and decided again on its own. Without a shared, runnable set of cases, those decisions never get compared. They just pile up.
 
-Stories 2 and 3 are the same mechanism. HOCON resolves substitutions against a merged tree, the spec describes the tree, and the implementation walks it in some order. When the order is not pinned down, the result depends on it. Nobody can see that from the prose. You see it when two implementations run the same file and print different things.
+Stories 2 and 3 are the similar mechanism. HOCON resolves substitutions against a merged tree, the spec describes the tree, and the implementation walks it in some order. When the order is not pinned down, the result depends on it. Nobody can see that from the prose. You see it when two implementations run the same file and print different things.
 
 ## Check your parser against it
 
@@ -170,7 +170,7 @@ The suite tells you whether implementations agree. It does not make them agree. 
 
 > Config should be boring!
 
-I think config should be data on disk that composes: includes, overrides, and substitutions here and there. Types and validation belong in the program that reads it: Pydantic, [Serde](https://serde.rs) or a [Zig struct](https://ziglang.org/documentation/0.16.0/#struct). HOCON does the composing part well, and it is the configuration format of many projects. If you want types, constraints and functions in the config itself, which you will appreciate when sharing config files across multiple languages, [Pkl](https://pkl-lang.org) is the honest choice.
+I think config should be data on disk that composes: includes, overrides, and substitutions here and there. Types and validation belong in the program that reads it: Pydantic, [Serde](https://serde.rs) or a [Zig struct](https://ziglang.org/documentation/0.16.0/#struct). HOCON does the composing part well, and it is the configuration format of many projects. If you want types, constraints, loops, and functions in the config itself, which you will appreciate when sharing config files across multiple languages, [Pkl](https://pkl-lang.org) is the honest choice.
 
 For everything else, HOCON just needs to mean the same thing everywhere. The suite says what that is. Come and tell me where it is wrong.
  

@@ -1,29 +1,34 @@
-/* Print: the article alone, on white paper, in the site's fonts.
+/* Print: the article alone, two columns in the manner of an IEEE paper.
    The theme links custom.css with media="screen", so it is imported here
    to bring the fonts and the paper-white palette into print as well. */
 @import url("custom.css");
 
 @page {
     size: A4;
-    margin: 22mm 20mm 24mm 20mm;
+    margin: 19mm 16mm 20mm 16mm;
+}
+* {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 /* Paper */
 html, body, #wrapper {
     background: #fff !important;
 }
-.content pre, .content .chroma, .content .highlight, .content .bg {
-    background: #f6f6f6 !important;
-}
 html {
-    font-size: 11pt !important; /* headings are in rem */
+    font-size: 10pt !important; /* headings are in rem */
 }
 #wrapper {
     padding: 0;
     min-height: 0;
     color: #000;
-    font-size: 10.5pt;
-    line-height: 1.45;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 9.5pt;
+    line-height: 1.3;
+}
+.content pre, .content .chroma, .content .highlight, .content .bg {
+    background: #f6f6f6 !important;
 }
 
 /* Only the article: no site header, tags, TOC, buttons, comments, pager */
@@ -35,31 +40,93 @@ hr.head-rule,
 #back-to-top,
 .paginator,
 .comment,
+.content .copy-button,
 #footer > div:first-child {
     display: none !important;
 }
 
-/* Article title is the one heading on top */
+/* Title and author on top, no date, word count or reading time */
 #main .post-heading {
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 1.2rem 0;
+    text-align: center;
 }
 #main .post-title {
+    font-family: "Times New Roman", Times, serif;
+    font-weight: 700;
     font-size: 20pt;
-    line-height: 1.25;
+    line-height: 1.2;
+    margin-bottom: 0.4rem;
 }
-#main .publish-metadata {
-    font-size: 9.5pt;
-    color: #555;
+#main .post-heading .publish-metadata {
+    font-size: 0;
+    line-height: 0;
+    color: #000;
 }
-#main .publish-metadata svg {
+#main .post-heading .publish-metadata svg,
+#main .post-heading .publish-metadata span {
     display: none;
 }
+#main .post-heading .publish-metadata::before {
+    content: "Miloš Kozák"; /* the theme's heading has no author line */
+    display: block;
+    font-size: 10.5pt;
+    line-height: 1.3;
+}
 
-/* Page breaks: no heading stranded at a page foot, no split code or table */
-h1, h2, h3, h4, h5, h6 {
+/* Two columns */
+.content {
+    column-count: 2;
+    column-gap: 6mm;
+    column-fill: balance;
+    text-align: justify;
+    hyphens: auto;
+    counter-reset: section-h2;
+}
+.content p {
+    margin-bottom: 0;
+    text-indent: 1.2em;
+}
+.content > p:first-of-type {
+    font-weight: 700; /* the perex, as an abstract */
+    text-indent: 0;
+}
+.content h2 + p, .content h3 + p, .content pre + p,
+.content table + p, .content blockquote + p, .content ul + p {
+    text-indent: 0;
+}
+
+/* Sections: roman numerals in small caps, subsections in italics */
+.content h2, .content h3 {
+    font-family: "Times New Roman", Times, serif;
+    font-weight: 400;
+    line-height: 1.2;
     break-after: avoid;
     break-inside: avoid;
 }
+.content h2 {
+    font-size: 10pt;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0.9rem 0 0.4rem 0;
+    counter-reset: section-h3;
+}
+.content h2::before, .content.numbered-subtitles h2::before {
+    counter-increment: section-h2;
+    content: counter(section-h2, upper-roman) ". ";
+}
+.content h3 {
+    font-size: 10pt;
+    font-style: italic;
+    margin: 0.6rem 0 0.25rem 0;
+}
+.content h3::before, .content.numbered-subtitles h3::before {
+    counter-increment: section-h3;
+    content: counter(section-h2) "." counter(section-h3) " ";
+    font-style: normal;
+}
+
+/* Page breaks */
 p, li {
     orphans: 3;
     widows: 3;
@@ -68,23 +135,23 @@ pre, table, blockquote, figure, img {
     break-inside: avoid;
 }
 
-/* Code wraps instead of being cut at the paper edge */
+/* Code wraps instead of being cut at the column edge */
 .content pre {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     overflow: visible;
-    border: 1px solid #ccc;
-    font-size: 8pt;
-    line-height: 1.4;
+    border: 1px solid #bbb;
+    font-size: 7pt;
+    line-height: 1.3;
+    padding: 0.4rem 0.5rem;
+    margin: 0.4rem 0;
 }
 .content code {
     background: #f3f3f3;
+    font-size: 0.9em;
 }
 .content pre code {
     background: none;
-}
-.content .copy-button {
-    display: none !important;
 }
 
 /* Links read as text; the ink is the same as the body */
@@ -95,22 +162,31 @@ pre, table, blockquote, figure, img {
     text-underline-offset: 2px;
 }
 
-/* Tables */
+/* Tables, quotes, lists */
 .content table {
     border-collapse: collapse;
-    font-size: 10pt;
+    font-size: 8.5pt;
+    margin: 0.5rem auto;
 }
 .content th, .content td {
     border: 1px solid #ccc;
-    padding: 0.25em 0.6em;
+    padding: 0.15em 0.5em;
+}
+.content blockquote {
+    margin: 0.5rem 0;
+    padding: 0.3rem 0.8rem;
+    font-size: 9pt;
+}
+.content ul, .content ol {
+    margin: 0.2rem 0 0.4rem 1.2em;
 }
 
 /* Site name and the article's address, once, at the end */
 #footer {
-    margin-top: 2rem;
+    margin-top: 1rem;
     padding-top: 0.6rem;
     border-top: 1px solid #ccc;
-    font-size: 9pt;
+    font-size: 8pt;
     color: #555;
     text-align: center;
 }
@@ -119,7 +195,7 @@ pre, table, blockquote, figure, img {
 }
 #footer .print-site {
     display: block;
-    font-size: 10pt;
+    font-size: 9pt;
     color: #000;
     margin-bottom: 0.2rem;
 }

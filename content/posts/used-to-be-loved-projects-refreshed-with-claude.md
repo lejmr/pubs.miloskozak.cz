@@ -103,4 +103,4 @@ The regression was real. The refreshed plugin called `dokuwiki\File\MediaResolve
 
 The fix, [#111](https://github.com/lejmr/dokuwiki-plugin-drawio/pull/111), was merged the same day, and CI now renders a `{{drawio}}` page on four old releases going back to 2018. Whole test suite expands to cover older versions as well. My hope is newer features will be less disruptive to even older versions!
 
-![GitHub Actions](/img/used-to-be-loved-projects-refreshed-with-claude/github-actions-drawio.png)
+![GitHub Actions](../../static/img/used-to-be-loved-projects-refreshed-with-claude/github-actions-drawio.png)

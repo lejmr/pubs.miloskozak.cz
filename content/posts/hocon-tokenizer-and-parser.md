@@ -196,30 +196,26 @@ Writing the parser was a great ride which took me 10 evenings in August, ticking
 
 At the end of Parsing I was tired and wanted to give up, but giving up is easy... so I left includes with syntax support only (they parse, but nothing splices the file in) and started with the final configuration graph necessary for resolution.
 
-## Configuration graph
+## The tree is not the config
 
-Tree outputing Parser is still very rough for users, users want to be able ask for `getFloat("a.b")` and get a `float` value. Especially, if `a.b` is something like this `a.b = ${c}`. If HOCON didnt support resolutions then we would not need the layer of code.
+A tree is what the parser makes, and nobody wants a tree.
+You want `port` as a `u16`, and you want it even when the file says `port = ${defaults.port}`.
+If HOCON had no substitutions this layer would not exist, the leaves could go straight to the type conversion.
+It has them, so between the tree and your struct sits one more stage, the one I wrote through the end of August and into September: [`Value.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Value.zig), 1438 lines and 34 tests and [`Key.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Key.zig) for paths.
 
-This is the stage I wrote through the end of August and into September, and it is in: `Value.zig` is 1248 lines and 25 tests, `Key.zig` another 137 lines of code, and `Config.zig` 155 lines forming the low level user interface.
-
-To provide users with right values I do following:
+The whole pipe is four lines, and they are the rest of this post:
 
 ```zig
-pub fn parseFromSliceLeaky(comptime T: type, allocator: Allocator, file_content: [:0]const u8) !T {
-        // Parse the file content
-        var parser = Ast.Parser{ .gpa = allocator, .t = .{ .t = Tokenizer.init(file_content) } };
-        const ast = try parser.parse();
-        // Convert AST into Key-Values
-        var obj = try Value.fromNode(allocator, ast);
-        // Resolve includes and return the resolved object to users in structure they provide
-        try obj.resolve(allocator);
-        return parseFromValue(T, allocator, obj);
-    }
+pub fn parseFromSliceLeaky(comptime T: type, allocator: Allocator, source: [:0]const u8) !T {
+    var parser = Ast.Parser{ .gpa = allocator, .t = .{ .t = Tokenizer.init(source) } };
+    const ast = try parser.parse();                 // bytes → tokens → tree
+    var doc = try Value.fromNode(allocator, ast);   // tree → one document, merged
+    try doc.resolve(allocator);                     // fill the ${} placeholders
+    return parseFromValue(T, allocator, doc);       // document → your struct
+}
 ```
 
-The goal here is to provide user facing API as Zig as possible meaing, I got to look into standard JSON package for inspiriation.
-
-At this layer we are bulding  a document from tree.
+The first job is the `fromNode` line, a document out of a tree.
 Three fields, written three ways, are one field:
 
 ```mermaid
@@ -233,196 +229,105 @@ graph LR
   class m out
 ```
 
-
 All three arrows work. `a.b = 1` nests, `a { b = 1 }` joins the two spellings, `"a".b = 1` lands in the same place, giving `{"a":{"b":1}}`.
-A number splits like any other unquoted string, so `1.5 = x` is `1 { 5 = x }`, which is what Java does too.
-For a while the key side and the `${}` side split paths in two different places, and `${x."y.z"}` arrived as three elements instead of two.
-Now there is one splitter and both sides go through it.
+To simplify logistics around keys I added `Key.zig` which tackles all posible variants of key and normalizes it, so the comma traversal is very simple.
 
-Then values merge by type, and the rules are short:
+**What a value is.** The whole layer is one tagged union in [`Value.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Value.zig):
 
-| written | result | rule |
-|---|---|---|
-| `a = 1` then `a = 2` | `2` | last wins |
-| `a = {x:1}` then `a = {y:2}` | `{x:1, y:2}` | objects merge |
-| `a = [1]` then `a = [2]` | `[2]` | lists do not, they replace |
+```zig
+pub const Value = union(enum) {
+    scalar: Scalar,     // the text as written, plus whether it was quoted
+    array: []Value,
+    object: []Member,   // key and value, in written order
+    ref: Ref,           // a path, plus whether it was ${?}
+    pending: []Value,   // parts of a concatenation that could not be joined yet
+};
+```
+`ref` and `pending` are the interesting one because they are here to deal with referencing. A `pending` is a row of values that sit next to each other in the file and could not be joined, because one of them is a ref.
+Everything else is finished the moment it is built. Internally, I am merging everything I can before I run into reference the same after reference. The same applies to concatenation, e.g., `1 "2"` is "1 2" or `[1]   [2]` is `[1,2]`,
 
-The table is what the oracles say.
-What the code does today is the concatenation half of it: two objects written next to each other merge by key, a key held by both merges again only if both sides hold an object, and anything else lets the right-hand value win, so `{b=[1]} {b=[2]}` is `[2]` and not the `[1,2]` a list concatenation would give.
-The other way in, the same key written twice inside one block, `{b=1, b=2}`, used to reach the graph as two members.
-Now it is `{"b":2}`, same as everywhere else.
-
-What comes out is not a tree anymore, it is a value graph.
-In August I expected it to carry two kinds of hole, a concatenation whose parts have not been joined and a reference that has not been looked up.
-It carries one.
-Concatenation turned out to belong to loading, the same place Java decides it: lists join flat, text parts join and stop being numbers, objects merge, and a string next to a list is the `WrongType` Java reports, raised while loading rather than later.
-The whitespace between two parts goes whichever way its neighbours go, a separator beside a list or an object, a character beside text, and a *quoted* space is a value, so `[1] " " [2]` is an error where `[1]   [2]` is `[1,2]`.
-
-The reference is the hole that stays.
-A substitution is the one part nothing can be joined into, so the parts around it are kept in order and the value stays pending: `"1" ${x} [2]` loads and fails only once `x` turns out to be a number, while `"1" [2] ${x}` fails immediately.
-Resolving it is the next stage, and the order is the whole reason this project exists:
+Nothing is looked up at this point. That is deliberate, lets have example:
 
 ```
-a = 1
-b = ${a}
-a = 2        →  b is 2, not 1
+db { host = "localhost", port = 5432 }
+addr = ${db.host}":"${db.port}
+db.host = "db.internal"
 ```
 
-A substitution resolves against the **finished** graph, not against what was visible above it.
-Resolving during merge gives you `1`, which is exactly the pyhocon behaviour I am trying to get away from.
-There is one exception, and it is the one that makes `+=` work at all:
+The `db` block from the tokenizer example, two lines longer. This is the document after loading, before anything is looked up:
 
 ```
-a = 1
-a = ${a} 2   →  "1 2"
+object
+├ db: object
+│  ├ host: scalar "db.internal"
+│  └ port: scalar 5432
+└ addr: pending [ ref [db, host], scalar ":", ref [db, port] ]
 ```
 
-Inside an assignment to `a`, `${a}` sees the previous value of `a`.
-So the merge cannot throw the old value away until the new one is resolved, and a cycle (`a = ${b}`, `b = ${a}`) has to be an error rather than a hang.
+```mermaid
+graph LR
+  r1["object"] -->|db| db1["object"]
+  db1 -->|host| h1["#quot;db.internal#quot;"]
+  db1 -->|port| p1["5432"]
+  r1 -->|addr| a1["pending"]
+  a1 --> x1["${db.host}"]
+  a1 --> x2["#quot;:#quot;"]
+  a1 --> x3["${db.port}"]
+  classDef object fill:#f3e8ff,stroke:#6b21a8,color:#4c1d95
+  classDef scalar fill:#dcfce7,stroke:#0b6b45,color:#065f46
+  classDef ref fill:#ffe4e6,stroke:#be123c,color:#881337
+  classDef pending fill:#fef3c7,stroke:#b45309,color:#78350f
+  class r1,db1 object
+  class h1,p1,x2 scalar
+  class x1,x3 ref
+  class a1 pending
+```
 
-None of that is written yet.
-Today `+` does not even get past the tokenizer, and `include` is recognised where a member starts and then nothing splices the file in.
+`db` is finished, the third line already merged into the first. `addr` could not be joined, so it holds its three parts in order: a placeholder with a path in it, the text, another placeholder. Resolving then gives `{"db":{"host":"db.internal","port":5432},"addr":"db.internal:5432"}`: `addr` sees `db.internal`, not the `localhost` that was above it in the file.
+
+Writing this layer took seven evenings and one morning, from 25 August to 13 September. The composing itself was not hard. What was hard is that by now the structures were nested a few levels deep, and the Zig debugging ecosystem is still early, so looking into some variables either failed or showed nothing. CodeLLDB in Zed was the first round of that, [written up separately](/posts/zig-debugging-in-zed/); today I am on my patched ZigBrains.
+
 
 ## Resolving
 
-The graph that comes out of merging still has holes in it, `${x}` where a value should be.
-Resolving fills them, and it runs once, after the whole file is loaded.
-Four tests from the repo show all of it.
-(The real code keeps an index per object and writes finished values back into the tree, so the second ref to the same place is free.
-I leave both out here.
-Same steps, just slower.)
+As already indicated the resolution is necessary to convert references to actuall values. 
+It runs once, after the whole file is loaded, and replaces every `ref` and `pending` in the graph with a finished value. 
+After resolution the config `object` has `pending`s emptied in favour of scalaras, arrays, or objects.
+The same file as above, through the pass. Resolving walks the top object in order, finds the two refs inside `addr`, fills them from the finished `db`, merges the three parts, and writes the result back:
 
-**A ref sees the finished file.**
-The test is called `a ref takes the last value of its target`:
-
-```
-x = 1
-a = ${x}
-x = 2
-```
-
-Before resolve even starts, merging has already happened.
-The second `x` replaced the first one, so this is the root it gets:
-
-```
-root
-├ x: 2
-└ a: ${x}
-```
-
-Resolve walks the members in order:
-
-```
-x: 2       a number, nothing to do
-a: ${x}    a ref: look up [x] from the root → 2
+```mermaid
+graph LR
+  r2["object"] -->|db| db2["object"]
+  db2 -->|host| h2["#quot;db.internal#quot;"]
+  db2 -->|port| p2["5432"]
+  r2 -->|addr| a2["#quot;db.internal:5432#quot;"]
+  classDef object fill:#f3e8ff,stroke:#6b21a8,color:#4c1d95
+  classDef scalar fill:#dcfce7,stroke:#0b6b45,color:#065f46
+  class r2,db2 object
+  class h2,p2,a2 scalar
 ```
 
 ```
-{"x":2,"a":2}
+{"db":{"host":"db.internal","port":5432},"addr":"db.internal:5432"}
 ```
 
-The `1` is gone long before anyone asks for it.
-That is the whole late binding thing from the previous section, and it costs nothing, it falls out of the order: merge first, resolve second.
+`addr` sees `db.internal`, the value `db.host` ended up with, and the `5432` stops being a number on the way, because it was merged to text.
+After ten evenings of parser I expected this part to be the hard one. It turned out to be OK.
 
-**Pending parts join.**
-Second test, `pending parts join`:
+Resolve is called on the main object and does bfs to converting all `ref` and `pending` values while for pending performs update operation.
 
-```
-x = [2]
-l = [1] ${x} [3]
-```
+There is one case that is not yet implemented, e.g., `a = ${a} 2`, where `${a}` means the *old* `a`.
+Which means the library needs to adjust update logic in this case, and then even the syntax suger `+=` will be doable.
 
-While loading, `[1]` and `[3]` could not be joined across `${x}`, nobody knew yet what `${x}` would be.
-So `l` is kept as its parts, in order:
-
-```
-root
-├ x: [2]
-└ l: pending [ [1], ${x}, [3] ]
-```
-
-Resolve takes the parts one by one and glues them with the same `update` function loading uses:
-
-```
-[1]        a list, keep          → [1]
-${x}       look up [x] → [2]     → [1] + [2] = [1, 2]
-[3]        a list, keep          → [1, 2] + [3] = [1, 2, 3]
-```
-
-```
-{"x":[2],"l":[1,2,3]}
-```
-
-Text works the same. `d = ${x}" ducks in a row"` with `x = 2` is `"2 ducks in a row"`, and the `2` stops being a number on the way.
-Glued text is a string.
-
-**An optional that finds nothing.** `${?x}` is the polite ref: if `x` does not exist, it is not an error, it just is not there.
-The test is `an undefined optional in a concatenation leaves a string`:
-
-```
-a = ${?nope}42
-```
-
-No space between the two, but they are still two parts, a ref cannot be glued into anything:
-
-```
-root
-└ a: pending [ ${?nope}, 42 ]
-```
-
-```
-${?nope}   look up [nope] → nothing, optional → drop the part
-42         the first part left, keep       → 42
-           two parts were written, so text → "42"
-```
-
-```
-{"a":"42"}
-```
-
-The spec says an undefined optional in a concatenation is an empty string, and empty string plus `42` is the string `"42"`. typesafe/config and pyhocon both drop the part and hand back the number `42`, as if the ref had never been written.
-So this is one of the rows where I side with the spec against both oracles, and the suite has it as [`substitutions/039`](https://github.com/lejmr/zig-hocon/tree/main/conformance/suite/substitutions).
-Written alone, `a = ${?nope}` does not become an empty string, the whole member disappears.
-Same rule for a list element, `[1, ${?nope}, 2]` is `[1,2]`.
-
-**A cycle is an error.**
-Last one, `a cycle is an error`:
-
-```
-a { b = ${a} }
-```
-
-```
-root
-└ a
-  └ b: ${a}
-```
-
-Resolve keeps a short list of the places it is working on right now.
-That list is the only thing between this file and an infinite loop:
-
-```
-a: object, walk it
-  b: ${a}   look up [a] → the object a
-            resolve a                 working on: [a]
-              b: ${a}   look up [a] → the object a again
-                        a is on the list → SubstitutionCycle
-```
-
-`a` would be finished once `b` is, and `b` once `a` is. typesafe/config says `${a} was part of a cycle of substitutions`. pyhocon says `RecursionError: maximum recursion depth exceeded`.
-
-The one case none of this handles yet is `a = ${a} 2`, where `${a}` means the *old* `a`.
-By the time resolve runs, the old `a` has been merged away, so for now that is a cycle too.
 
 ## Types
 
-Everything in that graph is still text. `5432` is the four characters it was in the file, `yes` is three.
-That is the same rule again, undecided is fine: in HOCON a value means something only once a type asks for it, and `yes` is `true` if you want a `bool` and `"yes"` if you want a string.
-So types show up last, and this is where Zig got interesting for me.
+Up until now everything happened inside HOCON. To use the resolved config without pain you need a typed, programmable interface, and HOCON has no types: there is no schema, so the schema has to live in the program. This chapter is about that.
+
+Everything in the graph is still text. `5432` is four characters, `yes` is three, and both stay that way until a type asks for them.
 
 My first go at it was `config.get("a.b")` returning a string.
-I deleted it before it compiled.
-That is the Java API, and it drags in path parsing, a `getInt`/`getString` family and the question of who owns the returned slice.
+I deleted it before it compiled, because I could not explain to myself how I would use it from Zig.
 What I actually want is what pydantic does, and replacing pydantic is why I started.
 So the interface is the one a Zig programmer already knows from `std.json`:
 
@@ -437,35 +342,22 @@ const parsed = try hocon.parseFromSlice(Server, gpa, source);
 defer parsed.deinit();
 ```
 
-Underneath it is one function with a `switch (@typeInfo(T))`.
-I will admit I stared at that switch for a good while, totally lost, before it clicked. `@typeInfo` hands you a description of a type as an ordinary tagged union, the same kind of thing as my own `Value`: `.int` with its bit width, `.optional` with a `child`, `.@"struct"` with a slice of fields (the `@"…"` is only there because `struct` is a keyword).
-The switch is decided at compile time, so for a `u16` the compiler builds a copy of the function that has nothing but the integer branch in it.
-The struct branch walks its fields with `inline for`, because a field's type is a comptime value and a runtime loop cannot carry it, and recurses.
-No codegen, no macros.
-That is the whole trick.
+Underneath it is one function in [`Config.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Config.zig), `parseFromValue`.
+I did not know where to start, so I spent a while reading `std.json` and asking Claude what a Zig user would expect.
+Then it turned out to be surprisingly easy: walk the fields of the struct and convert each one.
+The conversion is a `switch (@typeInfo(T))`, decided at compile time, so for a `u16` the compiler builds a copy of the function with nothing but the integer branch in it.
+The branches:
 
-Then the oracles again, this time asked for types instead of JSON, and not all the answers were the ones I expected:
-
-- `timeout = 0.5` read as an integer is `0` in typesafe/config and in pyhocon.
-No error.
-Mine refuses: a fraction where a whole number belongs is a typo, and truncating it silently is how a timeout becomes zero.
-- Booleans are `true`/`yes`/`on` and `false`/`no`/`off`, lowercase. pyhocon also takes `TRUE`.
-Java does not.
-- Asked for a string, Java gives you `1.50` back as written. pyhocon gives `"1.5"`, and `1e5` comes back as `"100000.0"`.
-For something meant to replace pyhocon, that is a line in the migration notes.
-- `null` read as an `int` is an error in Java and `None` in pyhocon.
-
-`parsed` owns an arena with everything the result points to, the `Parsed(T)` shape from `std.json`, and `parseFromSliceLeaky` is its twin for when you bring your own arena.
-The test for it found the only real bug of the week: unquoted text in the graph is a slice of the input buffer, not a copy.
-Read a file, parse it, free the buffer, and every string in your struct points at freed memory.
-The test now scribbles `x` over the source before it looks at the result.
-(The other test I would recommend to anyone is `std.testing.checkAllAllocationFailures`.
-It fails every allocation in turn and checks nothing leaks.
-A handful of lines.)
+- `.int`: the scalar's text through `std.fmt.parseInt`, base 10. So `0.5` where an integer belongs is an error, and `70000` into a `u16` is an error, not a wrap.
+- `.bool`: `true`/`yes`/`on` and `false`/`no`/`off`, lowercase, nothing else.
+- `.float`: `std.fmt.parseFloat`.
+- `[]const u8`: the text, copied into the result's memory. Any other slice is a list, converted item by item.
+- `.@"struct"` (the `@"…"` is only there because `struct` is a keyword): `inline for` over the fields, because a field's type is a comptime value and a runtime loop cannot carry it. A field with a member of that name gets it, converted recursively. A field without one gets its default value, or `null` if it is optional, or the whole thing fails with `MissingField`. Keys the struct has no field for are ignored.
+- Unquoted `null` is not a value of any of those. `"null"` with quotes is the string `null`.
 
 ## The command
 
-And the command from the top of this post exists:
+Since I have HOCON parser working it was just necessary to implement it as a command that returns JSON formated config file.
 
 ```
 $ hocon server.conf
@@ -474,11 +366,10 @@ $ hocon server.conf
 
 `tls = on` stays a string there, because JSON has no `on`, and a number prints the way it was written. `main.zig` is 36 lines, since `std.json` finds a `jsonStringify` on `Value` by itself and does the printing.
 
-It turned out more useful than I planned.
+This interface turned out more useful than I planned.
 Path in, JSON out, non-zero exit on rejection is exactly the adapter contract of the [conformance suite](https://github.com/lejmr/zig-hocon/tree/main/conformance) in the repo, so the command is also how the parser gets scored.
-First run: 248 of 436 against the spec. pyhocon gets 308, typesafe/config 390, and that last one is 89% against its own specification.
-That gap is what went back upstream as [lightbend/config #860 to #865](https://github.com/lightbend/config/pulls?q=is%3Apr+author%3Alejmr), four merged so far. `main` with those four in it scores 403, 92%, and it is not released yet.
-Most of what zig-hocon misses is simply not written yet: includes, `+=`.
+Scored before resolving landed: 251 of 445 against the spec. pyhocon gets 312, typesafe/config 1.4.9 gets 399, and that last one is 90% against its own specification.
+
 
 ## How fast
 
@@ -502,24 +393,17 @@ And the command a user actually runs, process start to exit:
 | 10 MB | 97 ms | 314 ms | 745 ms | 70.1 s |
 
 About 155 MB/s, and I have not optimised a single line.
-The old `hocon` crate is quadratic (10 KB in 17 ms, 100 KB in 1.7 s), so it gets dashes for the big files; I stopped waiting.
+The old `hocon` crate is quadratic (10 KB in 17 ms, 100 KB in 1.7 s), so it gets dashes for the big files.
 Java's first parse of a 1 KB file takes 18.9 ms and the same parse warm takes 0.03 ms, which is a JIT story more than a parser story. pyhocon does about 145 KB/s, flat, for every size.
-That is the thing I am trying to replace, three orders of magnitude down.
 
-Two honest caveats. zig-hocon has no resolve pass yet and keeps no line number per value, and Java pays for both even on a file with nothing to resolve.
-And the benchmark earned its keep before it printed a number: every run appends one line to a file, and only the last line survived.
-Zig 0.16's `stdout().writer()` writes positionally, `pwrite` from offset 0, so `hocon a.conf >> out.json` overwrote the start of the file. `writerStreaming` fixed it ([fabd93a](https://github.com/lejmr/zig-hocon/commit/fabd93a)).
+Of course I immediately wanted to do the [simdjson](https://arxiv.org/abs/1902.08318) thing, but that would be another project.
+SIMD has to wait.
 
-Of course I immediately wanted to do the [simdjson](https://arxiv.org/abs/1902.08318) thing.
-So I measured first.
-On the 10 MB file the tokenizer takes 10 ms, about 1 GB/s already, and that is 17% of the total.
-The parser building the tree takes over half.
-A tokenizer infinitely fast would buy 15%.
-SIMD can wait.
+Full disclosure: a lot happened with Claude Code because all that is CLI plumbing and oracle preparation in various languages, etc..
+The conversion switch and the resolve pass are mine, and the switch took me a lot of questions about what `T` even is at that point.
 
-Full disclosure: the `Parsed` wrapper, the JSON printer, the CLI plumbing and the benchmark harness are Claude Code's.
-The conversion switch is mine, and it took me a lot of questions about what `T` even is at that point.
 
-So point it at the four-line file from the top of this post and it tells the truth.
-Point it at the file on your production box and it stops at the first `${` with `error: Unresolved`.
-That is the next stage, and the next post.
+# Conclusion
+
+Here we are, Zig has semi working HOCON parser and I feel way more confident in Zig than in June 26". 
+I am planning to use this project in my other Zig projects because good configuration layer is key to the success.

@@ -71,7 +71,7 @@ Full disclosure: the parser itself (tokenizer, parser, value graph, conversion a
 The 43 rows where spec and Java part ways fall into about a dozen categories, half of them deliberate leniency rather than bugs. Three of them, in increasing order of how much they surprised me.
 
 ## Three findings
-### 1. The trailing text that disappears
+### The trailing text that disappears
 
 The example from the top. An object or an array followed by text on the same line:
 
@@ -83,7 +83,7 @@ server = { port = 8080 } debug
 
 This one is fixed: [lightbend/config#862](https://github.com/lightbend/config/pull/862) is merged and rejects it. It is not in a release yet.
 
-### 2. Renaming an unrelated key changes the result
+### Renaming an unrelated key changes the result
 
 This is the one that made me sit down. It looks like an edge case, but it is the usual layering pattern: a shared file takes a value from the environment if it is set (`${?DB_PORT}`), and the file that includes it holds the default. Two files:
 
@@ -117,7 +117,7 @@ It resolves. The root object in lightbend/config is a `HashMap`, and the order i
 
 pyhocon gets this one right. The fix is [lightbend/config#863](https://github.com/lightbend/config/pull/863), still open.
 
-### 3. A value that is overwritten still gets evaluated
+### A value that is overwritten still gets evaluated
 
 ```hocon
 w = [${does-not-exist}]

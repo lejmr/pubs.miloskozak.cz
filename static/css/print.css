@@ -1,0 +1,126 @@
+/* Print: the article alone, on white paper, in the site's fonts.
+   The theme links custom.css with media="screen", so it is imported here
+   to bring the fonts and the paper-white palette into print as well. */
+@import url("custom.css");
+
+@page {
+    size: A4;
+    margin: 22mm 20mm 24mm 20mm;
+}
+
+/* Paper */
+html, body, #wrapper {
+    background: #fff !important;
+}
+.content pre, .content .chroma, .content .highlight, .content .bg {
+    background: #f6f6f6 !important;
+}
+#wrapper {
+    padding: 0;
+    min-height: 0;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.5;
+}
+
+/* Only the article: no site header, tags, TOC, buttons, comments, pager */
+#header,
+hr.head-rule,
+#main > div:has(> .tag),
+#main > details,
+#sharingbuttons,
+#back-to-top,
+.paginator,
+.comment,
+#footer > div:first-child {
+    display: none !important;
+}
+
+/* Article title is the one heading on top */
+#main .post-heading {
+    margin: 0 0 1.5rem 0;
+}
+#main .post-title {
+    font-size: 22pt;
+    line-height: 1.25;
+}
+#main .publish-metadata {
+    font-size: 10pt;
+    color: #555;
+}
+#main .publish-metadata svg {
+    display: none;
+}
+
+/* Page breaks: no heading stranded at a page foot, no split code or table */
+h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+    break-inside: avoid;
+}
+p, li {
+    orphans: 3;
+    widows: 3;
+}
+pre, table, blockquote, figure, img {
+    break-inside: avoid;
+}
+
+/* Code wraps instead of being cut at the paper edge */
+.content pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    border: 1px solid #ccc;
+    font-size: 8.5pt;
+    line-height: 1.4;
+}
+.content code {
+    background: #f3f3f3;
+}
+.content pre code {
+    background: none;
+}
+.content .copy-button {
+    display: none !important;
+}
+
+/* Links read as text; the ink is the same as the body */
+#wrapper a, #wrapper a:link, #wrapper a:visited {
+    color: #000 !important;
+    text-decoration: underline;
+    text-decoration-color: #999;
+    text-underline-offset: 2px;
+}
+
+/* Tables */
+.content table {
+    border-collapse: collapse;
+    font-size: 10pt;
+}
+.content th, .content td {
+    border: 1px solid #ccc;
+    padding: 0.25em 0.6em;
+}
+
+/* Site name and the article's address, once, at the end */
+#footer {
+    margin-top: 2rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid #ccc;
+    font-size: 9pt;
+    color: #555;
+    text-align: center;
+}
+#footer .print-source {
+    display: block;
+}
+#footer .print-site {
+    display: block;
+    font-size: 11pt;
+    color: #000;
+    margin-bottom: 0.2rem;
+}
+#footer .print-site code {
+    background: none;
+    padding: 0;
+}

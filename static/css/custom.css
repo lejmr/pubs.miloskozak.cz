@@ -126,3 +126,6 @@ header h1 em {
     text-align: center;
     color: var(--fg2);
 }
+
+/* The article address is for paper only */
+.print-source, .print-site { display: none; }

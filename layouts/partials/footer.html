@@ -3,7 +3,10 @@
     <span>{{ .Site.Params.footnote | safeHTML }}</span>
   </div>
   <div>
+    <span class="print-site">{{ .Site.Params.title | safeHTML }}</span>
     <span>Copyright © {{ now.Format "2006"}} {{ .Site.Params.author }}</span>
+    <span class="print-source">{{ .Permalink }}</span>
   </div>
 </footer>
+<link media="print" rel="stylesheet" href='{{ "css/print.css" | absURL }}'>
 <script data-goatcounter="https://lejmr.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

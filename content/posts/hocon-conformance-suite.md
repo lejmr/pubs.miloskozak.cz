@@ -25,7 +25,7 @@ The [spec says](https://github.com/lightbend/config/blob/main/HOCON.md#string-va
 
 No error, no warning. `db3` is gone. Write it the other way round, `db3 [db1, db2]`, and you get the error you were promised.
 
-So before going further with the parser, I wrote down what HOCON is supposed to do. That became a [conformance suite](https://github.com/lejmr/zig-hocon/tree/main/conformance): 445 cases, each one a sentence of the spec turned into a config file and the value it must produce. lightbend/config 1.4.9 passes 90% of them, pyhocon 70%. My Zig parser, zig-hocon, 56%, and from here on it is built against the suite.
+So before going further with the parser, I wrote down what HOCON is supposed to do. That became a [conformance suite](https://github.com/lejmr/zig-hocon/tree/main/conformance): 445 cases, each one a sentence of the spec turned into a config file and the value it must produce. lightbend/config 1.4.9 passes 90% of them, pyhocon 70%. My Zig parser, zig-hocon, 69%, and from here on it is built against the suite.
 
 <!--more-->
 
@@ -58,7 +58,7 @@ So there are two scores per implementation. **Spec mode**: does it do what HOCON
 |---|---|---|
 | lightbend/config 1.4.9 | 90% (399) | 99% (442) |
 | pyhocon 0.3.63 | 70% (312) | 66% (295) |
-| zig-hocon | 56% (251) | 59% (261) |
+| zig-hocon | 69% (307) | 70% (310) |
 
 Java misses three rows of its own mode because those are open questions: a row I could not decide from the spec text is marked for review and counts as neither a pass nor a fail.
 
@@ -164,7 +164,7 @@ If you think a row is wrong, you are probably the person I need. [Open an issue]
 
 ## One implementation, held to the suite
 
-The suite tells you whether implementations agree. It does not make them agree. That part is the original Zig idea: one core, exposed through the C ABI, so any language that speaks C can bind to the same code. Then "the same HOCON in every language" is not a promise each port has to keep. [zig-hocon](https://github.com/lejmr/zig-hocon) is not there yet: 56% of the suite, no substitution resolution, no includes, no C shim. But from here on it is built against the suite, so the better the suite gets, the better every parser tested against it gets, mine included.
+The suite tells you whether implementations agree. It does not make them agree. That part is the original Zig idea: one core, exposed through the C ABI, so any language that speaks C can bind to the same code. Then "the same HOCON in every language" is not a promise each port has to keep. [zig-hocon](https://github.com/lejmr/zig-hocon) is not there yet: 69% of the suite, no includes, no C shim. But from here on it is built against the suite, so the better the suite gets, the better every parser tested against it gets, mine included.
 
 ## Conclusion
 

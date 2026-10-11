@@ -3,25 +3,24 @@ title: "What I learned writing a HOCON parser as my first Zig project"
 date: 2026-10-11
 tags: [zig, hocon, parsing]
 images: [/img/hocon-tokenizer-and-parser/zig-Hocon-social-card-1200x630.png]
-draft: true
+draft: false
 ---
 
 <img src="/img/hocon-tokenizer-and-parser/zig-Hocon-badge-master-1650x500.png" alt="zig-Hocon" style="width:100%; max-width:660px; display:block; margin:0 auto 1.5rem">
 
 I have decided to build a tool that will resolve my configuration dilemma for all languages at once. The tool has a CLI and a native API.
 Point it at a config file and it prints what your service will really read: includes spliced in, substitutions resolved against the environment it will run in, duplicate keys merged, the whole thing as JSON.
-The ultimate config resolution tool.
+
+<!--more-->
 
 The algorithm sits underneath the public API, sprinkled with Croatian salt and the sweat of morning runs, and made with love of programming, passion for learning and humble curiosity.
 The code might not be beautiful, and might not withstand a pro-Zig developer's standards, but it beats lightbend/config, hocon-rs and pyhocon on performance, and most importantly on simplicity.
 
-<!--more-->
-
 When I started this project I had never written Zig.
 I hungrily read Mitchell Hashimoto's [series on the Zig tokenizer](https://mitchellh.com/zig/tokenizer) and decided to jump in without knowing where it leads.
-Enjoy the read: the obstacles I ran into and the techniques I picked.
 
-The journey starts with the tokenizer.
+The journey starts with the tokenizer. Along the way you will meet a few of my informal comments, so please excuse them.
+
 
 ## Tokenization
 
@@ -63,8 +62,8 @@ Notice the following things:
   - Indentation has no meaning, so it does not survive.
 - `assignment` is a special token, not a string.
 
-Deciding that `5432` is a number does not happen here, because HOCON has no schema, unlike the PKL format.
-HOCON lets you write `=` or `:` (JSON files are valid HOCON precisely because of that colon), so both arrive as the same tag.
+Deciding that `5432` is a number does not happen here, because HOCON has no schema, unlike the Pkl format.
+HOCON lets you write `=` or `:` (JSON files are valid HOCON), so both arrive as the same tag.
 
 I decided to model a token as:
 
@@ -129,7 +128,7 @@ The spec's advice is to quote URLs, which is good advice that nobody follows.
 
 Maybe one day I will rewrite the tokenizer to use Zig's [labeled switch](https://ziglang.org/download/0.14.0/release-notes.html#Labeled-Switch), which arrived after Hashimoto's post was written.
 
-Zig's own tokenizer got a 13% speedup out of that rewrite, which is not my reason.
+Zig's own tokenizer got a [13% speedup](https://github.com/ziglang/zig/pull/21367) out of that rewrite, which is not my reason.
 My reason is that a state machine using labeled switch would be more readable than a while loop.
 
 I implemented the whole tokenizer in a few mornings and felt like the best developer ever.
@@ -148,8 +147,8 @@ Only one, no more!
 For that I wrapped the tokenizer into a struct holding the following methods:
 
 ```zig
-fn peek(self: *Parser) Token   // look at the next token, do not consume it
-fn next(self: *Parser) Token   // consume it
+fn peek(self: *PeekingTokenizer) Token   // look at the next token, do not consume it
+fn next(self: *PeekingTokenizer) Token   // consume it
 ```
 
 - Peek to decide, next to commit.
@@ -157,7 +156,7 @@ fn next(self: *Parser) Token   // consume it
 
 With just these two methods and structure-matching logic you can build the whole tree, and that is what I did. The nice part is that you can raise structural errors already on this layer if you need to. Every proper tree has a root, so I decided to introduce a root node as well.
 
-Same file (scroll up if you need), run through it:
+Same file (used in tokenizer example), run through it:
 
 ```mermaid
 graph TD
@@ -189,34 +188,36 @@ That is the rule I keep coming back to.
 
 The tree above is boring on purpose. 
 It is simple!
-HOCON gets interesting one line further, at `a = ${db.host} ":" 5432`, where three values sit next to each other and what they mean together depends on types nobody knows yet.
+HOCON gets interesting one line further, at `addr = ${db.host}":"5432`, where three values sit next to each other and what they mean together depends on types nobody knows yet.
 The parser refuses to decide and stores the parts.
 
 Writing the parser was a great ride: ten evenings between the end of July and 25 August, ticking features off the list one by one while new ones kept getting added... not the two or three evenings I had hoped for, way more!
 
 The parser stands on one very generic function, trivial to write in a language you know. Writing it in a language you do not know yet, with every allocation on you, is where the evenings went.
-Claude Code earned its keep here as a tutor, faster than digging for the information myself. Zig's documentation is borderline terrible and sends you to the source code, which is great once you know the idioms and useless before.
+Claude Code was a great tutor, faster than digging for the information myself. Zig's documentation is borderline terrible and sends you to the source code, which is great once you know the idioms and useless before.
 
 At the end of Parsing I was tired and wanted to give up, but giving up is easy... so I left includes with syntax support only (they parse, but nothing splices the file in) and started with the final configuration graph necessary for resolution.
 
-## The tree is not the config
+## The document
 
 A tree is what the parser makes, and nobody wants a tree.
 You want `port` as a `u16`, and you want it even when the file says `port = ${defaults.port}`.
-If HOCON had no substitutions this layer would not exist, the leaves could go straight to the type conversion.
-It has them, so between the tree and your struct sits one more stage, the one I wrote through the end of August and into September: [`Value.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Value.zig), 1438 lines and 34 tests, plus [`Key.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Key.zig) for paths.
+If HOCON had no substitutions this layer would be very simple, the leaves could go straight to the type conversion.
+It has them, so between the tree and your struct sits one more stage, the one I wrote through the end of August and into September: [`Value.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Value.zig), 1438 lines and 34 tests, plus [`Key.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/Key.zig) for paths. This chapter covers the first two steps of that stage, building the document and resolving it.
 
-The whole pipe is four lines, and they are the rest of this post:
+The whole pipeline is four lines:
 
 ```zig
 pub fn parseFromSliceLeaky(comptime T: type, allocator: Allocator, source: [:0]const u8) !T {
     var parser = Ast.Parser{ .gpa = allocator, .t = .{ .t = Tokenizer.init(source) } };
     const ast = try parser.parse();                 // bytes → tokens → tree
-    var doc = try Value.fromNode(allocator, ast);   // tree → one document, merged
-    try doc.resolve(allocator);                     // fill the ${} placeholders
+    var doc = try Value.fromNode(allocator, ast);   // tree → one document, merged when possible
+    try doc.resolve(allocator);                     // fill the ${} placeholders → merge the rest
     return parseFromValue(T, allocator, doc);       // document → your struct
 }
 ```
+
+### Document creation
 
 The first job is the `fromNode` line, a document out of a tree.
 Three fields, written three ways, are one field:
@@ -247,9 +248,9 @@ pub const Value = union(enum) {
 };
 ```
 `ref` and `pending` are the interesting ones because they are here to deal with referencing. A `pending` is a row of values that sit next to each other in the file and could not be joined, because one of them is a ref.
-Everything else is finished the moment it is built. Internally I merge everything I can before I hit a reference, and again after it. The same applies to concatenation, e.g., `1 "2"` is "1 2" or `[1]   [2]` is `[1,2]`.
+Everything else is finished the moment it is built. Internally I merge everything I can before I hit a reference, and again after it. The same applies to concatenation, e.g., `1 "2"` is `"1 2"` or `[1]   [2]` is `[1,2]`.
 
-Nothing is looked up at this point. That is deliberate, let's have an example:
+Nothing is looked up at this point, only assigned to a structure convenient for later resolution. Let's extend our example:
 
 ```
 db { host = "localhost", port = 5432 }
@@ -283,7 +284,7 @@ graph LR
 Writing this layer took seven evenings and one morning, from 25 August to 13 September. The composing itself was not hard. What was hard is that by now the structures were nested a few levels deep, and the Zig debugging ecosystem is still early, so looking into some variables either failed or showed nothing. CodeLLDB in Zed was the first round of that, [written up separately](/posts/zig-debugging-in-zed/); today I am on my patched ZigBrains.
 
 
-## Resolving
+### Resolving
 
 As already indicated the resolution is necessary to convert references to actual values. 
 It runs once, after the whole file is loaded, and replaces every `ref` and `pending` in the graph with a finished value. 
@@ -302,28 +303,28 @@ graph LR
   class h2,p2,a2 scalar
 ```
 
-```
+```json
 {"db":{"host":"db.internal","port":5432},"addr":"db.internal:5432"}
 ```
 
 `addr` sees `db.internal`, the value `db.host` ended up with, and the `5432` stops being a number on the way, because it was joined to text.
 After ten evenings of parser I expected this part to be the hard one. It turned out to be OK.
 
-Resolve is called on the top object and walks the document depth-first, converting every `ref` and `pending` on the way; a `pending` goes through the same `update` operation loading uses.
+Resolve is called on the top object and walks the document depth-first, converting every `ref` and `pending` on the way; a `pending` goes through the same `update` operation loading uses. In other words I could take advantage of already written code.
 
 There is one case that is not yet implemented, e.g., `a = ${a} 2`, where `${a}` means the *old* `a`.
-Which means the library needs to adjust update logic in this case, and then even the syntax sugar `+=` will be doable.
+Which means the library needs to adjust update logic in this case, and then even the syntax sugar version `+=` will be doable.
 
 
 ## Types
 
-Up until now everything happened inside HOCON. To use the resolved config without pain you need a typed, programmable interface, and HOCON has no types: there is no schema, so the schema has to live in the program. This chapter is about that.
+Up until now everything happened inside HOCON on tree or document structures. To use the resolved config without pain you need a typed, programmable interface, and HOCON has no types: there is no schema, so the schema has to live in the program.
 
-Everything in the graph is still text. `5432` is four characters, `yes` is three, and both stay that way until a type asks for them.
+Everything in the resolved document is still text. `5432` is four characters, `yes` is three, and both stay that way until a type asks for them.
 
 My first go at it was `config.get("a.b")` returning a string.
-I deleted it before it compiled, because I could not explain to myself how I would use it from Zig.
-What I actually want is what pydantic does, and replacing pydantic is why I started.
+I deleted it before it compiled, because I could not explain to myself how I would use it from Zig, and it felt like adding an extra layer of debatable value.
+What I actually want is what pydantic does, and having pydantic replacement for Zig is why I started.
 So the interface is the one a Zig programmer already knows from `std.json`:
 
 ```zig
@@ -347,15 +348,8 @@ The branches:
 - `.bool`: `true`/`yes`/`on` and `false`/`no`/`off`, lowercase, nothing else.
 - `.float`: `std.fmt.parseFloat`.
 - `[]const u8`: the text, copied into the result's memory. Any other slice is a list, converted item by item.
-- `.@"struct"` (the `@"…"` is only there because `struct` is a keyword): `inline for` over the fields, because a field's type is a comptime value and a runtime loop cannot carry it. A field with a member of that name gets it, converted recursively. A field without one gets its default value, or `null` if it is optional, or the whole thing fails with `MissingField`. Keys the struct has no field for are ignored.
-- Unquoted `null` is not a value of any of those. `"null"` with quotes is the string `null`.
-
-`parsed` owns an arena with everything the result points to, the `Parsed(T)` shape from `std.json`, and `parseFromSliceLeaky` is its twin for when you bring your own allocator.
-The test for it found the only real bug of the week, and the bug goes straight back to the tokenizer's "no copying, no allocator": unquoted text in the graph is a slice of the input buffer, not a copy.
-Read a file, parse it, free the buffer, and every string in your struct points at freed memory.
-That is why the string branch copies, and the test, `convert.string outlives the source buffer`, now scribbles `x` over the source and frees it before it looks at the result.
-The other test I would recommend to anyone is `std.testing.checkAllAllocationFailures`, in [`root.zig`](https://github.com/lejmr/zig-hocon/blob/main/src/root.zig): it fails every allocation in turn and checks nothing leaks.
-A handful of lines.
+- `.@"struct"`: the heart of the type conversion. You cannot loop over the fields of a struct at runtime, because every field has a different type and a type is a compile-time thing, so the loop is an `inline for` and the compiler unrolls it into one body per field. For each field I look for a member of the same name in the object. If it is there, I convert it recursively, whatever type the field has. If it is not, the field gets its default value, or `null` if it is optional, and if it has neither the whole thing fails with `MissingField`. Keys the struct does not know are ignored. The `@"…"` is only there because `struct` is a keyword. It felt odd to me at first, but it is totally in line with Zig.
+- `.@"enum"`: the text has to be one of the enum's names, `std.meta.stringToEnum` does the lookup. So `level = debug` lands in `.debug` and `level = verbose` is a `TypeMismatch`.
 
 ## The command
 
@@ -366,14 +360,14 @@ $ hocon server.conf
 {"server":{"host":"example.org","port":8080,"tags":["a","b c"],"tls":"on"}}
 ```
 
-`tls = on` stays a string there, because JSON has no `on`, and a number prints the way it was written. `main.zig` is 36 lines, since `std.json` finds a `jsonStringify` on `Value` by itself and does the printing.
+`tls = on` stays a string there, because JSON has no `on`, and a number prints the way it was written. `main.zig` is 36 lines, since `std.json` finds a `jsonStringify` on `Value` by itself and does the printing. This part made me actually very happy because even if it is not fully explicit it is very convenient.
 
 This interface turned out more useful than I planned.
 Path in, JSON out, non-zero exit on rejection is exactly the adapter contract of the [conformance suite](https://github.com/lejmr/zig-hocon/tree/main/conformance) in the repo, so the command is also how the parser gets scored.
 With the resolver in: 307 of 445 against the spec, 69%. pyhocon gets 312, lightbend/config 1.4.9 gets 399, and that last one is 90% against its own specification.
 
 
-## How fast
+## How fast?
 
 I did not plan to measure anything yet.
 Then I got curious.
@@ -398,32 +392,25 @@ About 140 MB/s, and I have not optimised a single line.
 The old `hocon` crate is quadratic (10 KB in 18 ms, 100 KB in 1.8 s), so it gets dashes for the big files.
 Java's first parse of a 1 KB file takes 21.4 ms and the same parse warm takes 0.03 ms, which is a JIT story more than a parser story. pyhocon does about 140 KB/s, flat, for every size.
 
-And the benchmark earned its keep before it printed a number: every run appends one line to a file, and only the last line survived.
-Zig 0.16's `stdout().writer()` writes positionally, `pwrite` from offset 0, so `hocon a.conf >> out.json` overwrote the start of the file. `writerStreaming` fixed it ([1296891](https://github.com/lejmr/zig-hocon/commit/1296891)), a one-line change in the 36 lines of `main.zig`.
-
 Of course I immediately wanted to do the [simdjson](https://arxiv.org/abs/1902.08318) thing, but that would be another project.
 SIMD has to wait.
 
-Full disclosure, in one place. Written by hand: the parser, the value graph and its merging, the resolver, the public API with its `Parsed` wrapper, and the conversion switch, which took me a lot of questions about what `T` even is at that point. The tokenizer from its second commit on: the first 220 lines were a Claude scaffold I let it commit, and a third of today's file still dates from it. Claude Code's outright: most of the tests (I wrote the implementation against them), the JSON printer, the `hocon` command, the benchmark harness, the oracle wrappers in three languages and the conformance tooling. The commits say which is which: the ones it co-authored carry its trailer.
+## Disclosure
+
+A lot of code was written by hand: the tokenizer, parser, the value graph and its merging, the resolver, the public API with its `Parsed` wrapper. Everywhere you will find beautiful unit tests that are more than obvious they are AI generated, yes they are. Also whole structure and composition comes from my head, you might find them a bit pythonic I suppose, but they are what they are. Claude Code wrote the JSON printer, the `hocon` command, the benchmark harness, the oracle wrappers in three languages and the conformance tooling. This is still an evening project, so not to give up means I needed the feeling of moving and parts that are commodity to me are AI generated.
 
 
 ## Conclusion
 
-The path from bytes to a typed struct is four stages, each with one job:
+This article is just for myself to recall what my initial steps to Zig felt like in a few years.
+The HOCON parser is missing some serious features to be production ready, but I am planning to add all remaining features to reach very high score in [my own conformance suite](/posts/hocon-conformance-suite/) by the end of this year. 
+I believe the year 2027 can be the year of zig-hocon library.
 
-1. **Tokenizer** — one character at a time, tag + offsets, no allocation, no opinion.
-2. **Parser** — one token of lookahead, a tree whose leaves keep the text as written.
-3. **Value graph** — merge what can be merged, leave `ref` and `pending` for later.
-4. **Resolve, then types** — fill the placeholders once, then convert into the caller's struct.
+No more marketing, please follow the project on [github](https://github.com/lejmr/zig-hocon), and give me feedback on your priorities for this project via [Issues](https://github.com/lejmr/zig-hocon/issues).
 
-The rule that holds it together is simple: **undecided is fine, lost is not.**  
-Quotes stay until a type asks for a number. Concatenation parts stay until every side is known. The schema lives in the program, not in the file.
-
-What works today: tokenize, parse, merge, resolve ordinary substitutions, load into a Zig struct, print JSON.  
-What does not: includes that actually splice files, self-referential forms like `a = ${a} 2`, and `+=`. Those are next, and after them whatever the suite says is still wrong, until zig-hocon is something you can put in production.
-
-The same pipeline is how the [conformance suite](https://github.com/lejmr/zig-hocon/tree/main/conformance) scores the parser — path in, JSON out. If you write configs or parsers, that suite is the more reusable artefact, and [the previous post](/posts/hocon-conformance-suite/) is about it. It stays the source of truth and grows with every disagreement I find. The Zig code is one implementation held to it. Once it holds, the C shim and a Python library follow, which is where this started: one implementation, every language.
-
-Here we are: a half-working HOCON parser, and I feel way more confident in Zig than in June '26. I am going to use it in my other Zig projects, because a good configuration layer is key to the success.
-
-So point it at the four-line file from the top of this post and it tells the truth. Point it at the file on your production box and it stops at the first `include` with `error: UnsupportedNodeKind`. That is the next post.
+My main takeaways:
+- I like the explicit memory management even though it sometimes feels like roadblocks, but on the other hand everything just works!
+- Exhaustive structural pattern matching is beautiful, and I wish it would come one day to Python on this level.
+- Ecosystem is young, but already very useful and compilation time is super fast!
+- A lot of constructions feel just right compared to my previous attempt at Rust two years ago.
+- HOCON is very handy for majority of my projects, but the implementation is hard because of missing validation framework, so I built [one](/posts/hocon-conformance-suite/).

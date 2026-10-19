@@ -105,6 +105,6 @@ A side effect of not parsing in Python. My configs at work are around 5 KB, and 
 
 ## Try it
 
-If you use pyhocon, switch the import and run your tests. If something breaks and it isn't in [MIGRATING.md](https://github.com/lejmr/zig-hocon/blob/main/python/MIGRATING.md), please open an issue.
+If you use pyhocon, install [zig-hocon from PyPI](https://pypi.org/project/zig-hocon/), switch the import and run your tests. If something breaks and it isn't in [MIGRATING.md](https://github.com/lejmr/zig-hocon/blob/main/python/MIGRATING.md), please open an issue.
 
 If you maintain a HOCON parser, in any language, run the suite against it. An adapter is a few lines, and I'll add your library to the table. And if you think one of the cases is wrong, tell me which sentence of the spec you read differently.

@@ -3,7 +3,7 @@ title: "pyhocon gets one HOCON test in four wrong. Here's how I measured it."
 date: 2026-10-19
 tags: [hocon, python, pyhocon, testing]
 images: [/img/hocon-tokenizer-and-parser/zig-Hocon-social-card-1200x630.png]
-draft: true
+draft: false
 ---
 
 If your Python service reads `.conf` files, you probably use pyhocon. It's the HOCON library Python has had for a decade: `ConfigFactory.parse_file("app.conf")`, `conf.get_string("db.host")`, done.
@@ -73,7 +73,7 @@ I ran every HOCON parser I could find for Python against it, with the Java refer
 | pyhocon | Python | 70.6 % |
 | dd-pyhocon | Python | 70.6 % |
 
-pyhocon-fix and dd-pyhocon are forks of pyhocon. Several other packages on PyPI with HOCON in the name wrap pyhocon and have no parser of their own. Even the Java reference doesn't get to 100 %. The full report, with every library and every case, is a single HTML page: [link].
+pyhocon-fix and dd-pyhocon are forks of pyhocon. Several other packages on PyPI with HOCON in the name wrap pyhocon and have no parser of their own. Even the Java reference doesn't get to 100 %. The full report, with every library and every case, is a single HTML page: [the conformance report](https://htmlpreview.github.io/?https://github.com/lejmr/zig-hocon/blob/main/conformance/report.html).
 
 ## A drop-in replacement
 

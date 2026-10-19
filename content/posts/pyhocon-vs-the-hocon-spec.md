@@ -1,5 +1,5 @@
 ---
-title: "pyhocon gets one HOCON test in four wrong. Here's how I measured it."
+title: "pyhocon isn't always right. Here's how I measured it."
 date: 2026-10-19
 tags: [hocon, python, pyhocon, testing]
 images: [/img/hocon-tokenizer-and-parser/zig-Hocon-social-card-1200x630.png]
@@ -96,6 +96,8 @@ The API is pyhocon's, so in most projects switching is that one import. Where zi
 ## Why the parser isn't written in Python
 
 The core is written in Zig and compiled into a small C library. The Python package is a thin ctypes layer over it, and every decision about what a config means is made in the core. The same core could sit under Ruby, Go, Node or anything else that can call C, with the same 444 cases passing. Python just happens to be the first language with a binding. (If you're curious about the Zig side, [I wrote that up too](/posts/hocon-tokenizer-and-parser/).)
+
+Full disclosure: most of the code is written with AI and reviewed by me. The [changelog](https://github.com/lejmr/zig-hocon/blob/main/CHANGELOG.md) says how much of each release is written by hand.
 
 ## It's also fast
 
